@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
+import { aktifModul } from '../../lib/modul'
 
 const STORAGE_KEY = 'ark.sidebar.collapsed'
 
@@ -21,8 +22,11 @@ export function AppShell() {
     setMobileOpen(false)
   }, [location.pathname])
 
+  /* Aktif modül — menü ve kapsam buna göre değişir */
+  const modul = aktifModul(location.pathname)
+
   /* Proje / paket detay ekranları geniş çalışma alanı ister */
-  const wide = location.pathname.startsWith('/projeler/')
+  const wide = location.pathname.includes('/projeler/')
 
   return (
     <div className="min-h-screen bg-bg">
@@ -35,7 +39,11 @@ export function AppShell() {
             collapsed ? 'w-[72px]' : 'w-[var(--ark-sidebar-width)]'
           }`}
         >
-          <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
+          <Sidebar
+            modul={modul}
+            collapsed={collapsed}
+            onToggle={() => setCollapsed((v) => !v)}
+          />
         </aside>
 
         {/* Mobil kenar çubuğu */}
@@ -65,6 +73,7 @@ export function AppShell() {
               </div>
               <div className="h-[calc(100%-var(--ark-topbar-height))]">
                 <Sidebar
+                  modul={modul}
                   collapsed={false}
                   onToggle={() => setMobileOpen(false)}
                   onNavigate={() => setMobileOpen(false)}

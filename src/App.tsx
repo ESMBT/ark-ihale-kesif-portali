@@ -15,31 +15,60 @@ import { ProjectDetailPage } from './features/projects/ProjectDetailPage'
 
 import { PackageDetailPage } from './features/packages/PackageDetailPage'
 
+import { KesifBosSayfa } from './features/kesif/KesifBosSayfa'
+import { SantiyeciProjectListPage } from './features/santiyeci/SantiyeciProjectListPage'
+import { SantiyeciProjectDetailPage } from './features/santiyeci/SantiyeciProjectDetailPage'
+import { SantiyeciPackageDetailPage } from './features/santiyeci/SantiyeciPackageDetailPage'
+
 export default function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route path="/" element={<Navigate to="/projeler" replace />} />
+        <Route path="/" element={<Navigate to="/moduller" replace />} />
+
+        {/* Bildirimler ve hesap ayarları — modülden bağımsız */}
         <Route path="/bildirimler" element={<NotificationsPage />} />
-
-        {/* Sözleşmeye dönüşmüş keşifler — herkese açık */}
-        <Route path="/kesif/sozlesmeler" element={<ContractedTakeoffPage />} />
-
-        {/* Kullanıcı ve ekip yönetimi */}
         <Route path="/profilim" element={<ProfilePage />} />
         <Route path="/kullanim" element={<UserManagementPage />} />
 
-        {/* Modül listesi */}
+        {/* Modül seçim ekranı */}
         <Route path="/moduller" element={<ModulePickerPage />} />
 
-        {/* Projeler */}
-        <Route path="/projeler" element={<ProjectListPage />} />
-        <Route path="/projeler/talep" element={<ProjectCodeRequestPage />} />
-        <Route path="/projeler/:id" element={<ProjectDetailPage />} />
+        {/* ============ İHALE YÖNETİMİ MODÜLÜ ============ */}
+        <Route path="/modul/ihale" element={<Navigate to="/modul/ihale/projeler" replace />} />
+        <Route path="/modul/ihale/projeler" element={<ProjectListPage />} />
+        <Route path="/modul/ihale/projeler/talep" element={<ProjectCodeRequestPage />} />
+        <Route path="/modul/ihale/projeler/:id" element={<ProjectDetailPage />} />
+        <Route path="/modul/ihale/projeler/:id/paket/:paketId" element={<PackageDetailPage />} />
+        <Route path="/modul/ihale/kesif" element={<KesifBosSayfa />} />
 
-        <Route path="/projeler/:id/paket/:paketId" element={<PackageDetailPage />} />
+        {/* ============ ŞANTİYECİ YÖNETİMİ MODÜLÜ ============ */}
+        <Route
+          path="/modul/santiyeci"
+          element={<Navigate to="/modul/santiyeci/projeler" replace />}
+        />
+        <Route path="/modul/santiyeci/projeler" element={<SantiyeciProjectListPage />} />
+        <Route path="/modul/santiyeci/projeler/talep" element={<ProjectCodeRequestPage />} />
+        <Route path="/modul/santiyeci/projeler/:id" element={<SantiyeciProjectDetailPage />} />
+        <Route
+          path="/modul/santiyeci/projeler/:id/paket/:paketId"
+          element={<SantiyeciPackageDetailPage />}
+        />
+        <Route path="/modul/santiyeci/kesif" element={<KesifBosSayfa />} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Sözleşmeye dönüşmüş keşifler — menüden kaldırıldı, adres korunur */}
+        <Route path="/kesif/sozlesmeler" element={<ContractedTakeoffPage />} />
+
+        {/* Eski yollar → ihale modülüne yönlendirilir */}
+        <Route path="/projeler" element={<Navigate to="/modul/ihale/projeler" replace />} />
+        <Route path="/projeler/talep" element={<Navigate to="/modul/santiyeci/projeler/talep" replace />} />
+        <Route path="/projeler/:id" element={<Navigate to="/modul/ihale/projeler/:id" replace />} />
+        <Route
+          path="/projeler/:id/paket/:paketId"
+          element={<Navigate to="/modul/ihale/projeler/:id/paket/:paketId" replace />}
+        />
+
+        <Route path="*" element={<Navigate to="/moduller" replace />} />
       </Route>
     </Routes>
   )

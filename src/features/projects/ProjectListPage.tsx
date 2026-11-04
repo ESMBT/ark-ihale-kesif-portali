@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Field'
 import { Modal } from '../../components/ui/Modal'
 import { RowMenu } from '../../components/ui/RowMenu'
 import { useStore } from '../../data/store'
+import { modulYolu } from '../../lib/modul'
 import { ProjectEditModal } from './ProjectEditModal'
 import type { Proje } from '../../data/types'
 
@@ -30,14 +31,7 @@ export function ProjectListPage() {
 
   return (
     <>
-      <PageHeader
-        title="Tüm Projeler"
-        actions={
-          <Button variant="brand" icon="send" onClick={() => navigate('/projeler/talep')}>
-            Proje Kodu Talebi
-          </Button>
-        }
-      />
+      <PageHeader title="Tüm Projeler" />
 
       <Card padded={false}>
         {/* Arama çubuğu */}
@@ -81,7 +75,7 @@ export function ProjectListPage() {
                   return (
                     <tr
                       key={p.id}
-                      onClick={() => navigate(`/projeler/${p.id}`)}
+                      onClick={() => navigate(modulYolu('ihale', `/projeler/${p.id}`))}
                       className="cursor-pointer border-b border-line last:border-0 hover:bg-surface-muted"
                     >
                       <td className="px-5 py-4">
@@ -112,7 +106,7 @@ export function ProjectListPage() {
                             iconRight="arrow-right"
                             onClick={(e) => {
                               e.stopPropagation()
-                              navigate(`/projeler/${p.id}`)
+                              navigate(modulYolu('ihale', `/projeler/${p.id}`))
                             }}
                           >
                             Aç

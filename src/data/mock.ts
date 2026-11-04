@@ -738,6 +738,12 @@ function ihaleYonetimi(
 /** Portalda oturum açan kullanıcı (şantiyeci) */
 export const AKIF_KULLANICI_ID = 'K-005'
 
+/** Oturum açan şantiyecinin adı (proje sahipliği eşleşmesi) */
+export const SANTIYECI_ADI = 'Hakan Öztürk'
+
+/** Şantiyecinin personel kaydı (ihale paketi sorumluluk eşleşmesi) */
+export const SANTIYECI_PERSONEL_ID = 'p5'
+
 export const projeler: Proje[] = [
   {
     id: 'PRJ-2026-001',
@@ -931,6 +937,7 @@ export const projeler: Proje[] = [
         isTipi: 'Götürü',
         sozlesmeTuru: 'kisa-sozlesme',
         sorumluId: 'p1',
+        olusturanId: 'K-005',
         alanlar: {
           ihIsinAdi: 'Çankaya Kongre Merkezi Kaba Yapı İşleri',
           ihIhaleSekli: 'Götürü',
@@ -946,6 +953,7 @@ export const projeler: Proje[] = [
         isTipi: 'Malzeme + İşçilik',
         sozlesmeTuru: 'alt-yuklenici',
         sorumluId: 'p6',
+        olusturanId: 'K-005',
         alanlar: {
           ihIsinAdi: 'Çatı ve Isı Yalıtım İşleri',
           ihIsKapsami: 'EPS, taş yünü ve su yalıtımı uygulaması.',

@@ -335,6 +335,33 @@ Paket detayındaki **“Belgeler”** sekmesi (Genel Bakış’tan hemen sonra) 
 
 ---
 
+## 9b. Modül ayrımı — İhale Yönetimi ↔ Şantiyeci Yönetimi
+
+Portal iki modülden oluşur. **“Ark İnşaat”** markasına tıklandığında `/moduller` açılır; modül kartına tıklanınca
+modülün kendi route alanı, menüsü ve **veri kapsamı** devreye girer.
+
+| | **İhale Yönetimi** (`/modul/ihale`) | **Şantiyeci Yönetimi** (`/modul/santiyeci`) |
+|---|---|---|
+| Menü | Tüm Projeler · Keşif · Bildirimler · Hesap Ayarları | **Projelerim** · **Proje Kodu Talebi** · Keşif · Bildirimler · Hesap Ayarları |
+| Proje kapsamı | İhale ekibi kapsamı (karışık — sonraki aşamada ayrılacak) | **Yalnızca şantiyecinin projeleri** (sahibi / atandığı) |
+| Proje listesi | Tüm Projeler | **Projelerim** + **Arşivlenenler** bölümü |
+| Proje Kodu Talebi | **Görünmez** | **Var** |
+| Proje Düzenle / Arşivle | Mevcut (karışık) | **Var** (şantiyeci aksiyonları) |
+| İhale paketi kapsamı | Tüm paketler | **Sorumlu olduğu + kendisinin oluşturduğu** paketler |
+| Paket formu | Mevcut form | **Aynı form** (ad · sözleşme türü → türe göre alanlar) |
+| Paket Düzenle / Yayınla / Sil | Mevcut | **Aynı form**; **Yayınla** ve **Sil** şantiyeci modülünde; **sil yalnızca taslak iken** |
+| Paket detayı sekmeleri | 8 sekme | **4 sekme: İhale Özeti · Belgeler · Keşif · Alt Yüklenici Firma Öneri** |
+| Keşif menüsü | Boş | Boş |
+
+**Kural:** Şantiyeci paketi **yayınladığında** paket ihale ekibine düşer ve artık silinemez; ihale ekibi
+ihaleyi iptal eder. Şantiyeci tarafında ayrı bir durum değişikliği gerekmez.
+
+**Nihai hedef (not):** Modül seçimi role göre otomatik olacak — kullanıcının tek erişimi olan modül varsa
+modül seçim ekranı hiç gösterilmez, doğrudan o modüle girilir. Şimdilik seçim ekranı her zaman görünür
+(geçişi kolaylaştırmak için).
+
+---
+
 ## 10. Alt Yüklenici Yönetimi (ihale ekibi gözünden) ve paket durumları
 
 ### 10.1 Alt Yüklenici Yönetimi

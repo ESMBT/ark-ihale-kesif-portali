@@ -51,12 +51,18 @@ için: [`docs/DAYITIM.md`](docs/DAYITIM.md).
 
 | Rota | Ekran | Karşılığı |
 |---|---|---|
-| `/` | → `/projeler` yönlendirmesi | |
-| `/moduller` | **Modül listesi** — kenar çubuğundaki “Ark İnşaat” markasına tıklandığında sağdaki alanda açılır; 4 modül kartı (içeri şimdilik girilemez) | Modüler portal |
-| `/projeler` | **Tüm Projeler** — isim araması + tablo (Aktif İhaleler ile aynı yapı); satır sonunda **⋮** menüsü (Projeyi Arşivle / Projeyi Düzenle) | ARK Alt Yüklenici · Aktif İhaleler |
-| `/projeler/:id` | **Proje ekranı** — proje adı + durum, altında sekmeler: İhale Paketleri · Keşif · Dokümanlar · Dashboard · Proje Bilgileri | Conwize “Marina” |
-| `/projeler/talep` | **Proje Kodu Talebi** — 4 blok form + mail/bildirim önizlemesi | Excel “proje kodu talep” |
-| `/projeler/:id/paket/:paketId` | **İhale paketi detayı** — pill sekmeler (Genel Bakış · Belgeler · Keşif · Alt Yüklenici Davet · Mukayeseli Karşılaştırma · İhale Yönetimi · Dashboard · Soru/Cevap) | Conwize “bid detail” |
+| `/` | → `/moduller` yönlendirmesi | |
+| `/moduller` | **Modül seçim ekranı** — kenar çubuğundaki “Ark İnşaat” markasına tıklanınca açılır; **İhale Yönetimi** ve **Şantiyeci Yönetimi** modülleri girilebilir (Alt Yüklenici / Hakediş yapım aşamasında) | Modüler portal |
+| **İHALE YÖNETİMİ MODÜLÜ** | | |
+| `/modul/ihale/projeler` | **Tüm Projeler** — isim araması + tablo; **Proje Kodu Talebi** bu modülde görünmez | ARK Alt Yüklenici · Aktif İhaleler |
+| `/modul/ihale/projeler/:id` | **Proje ekranı** — İhale Paketleri · Keşif · Dokümanlar · Dashboard · Proje Bilgileri | Conwize “Marina” |
+| `/modul/ihale/projeler/:id/paket/:paketId` | **İhale paketi detayı** — 8 pill sekme (Genel Bakış · Belgeler · Keşif · Alt Yüklenici Yönetimi · Mukayeseli Karşılaştırma · İhale Yönetimi · Dashboard · Soru/Cevap) | Conwize “bid detail” |
+| **ŞANTİYECİ YÖNETİMİ MODÜLÜ** | | |
+| `/modul/santiyeci/projeler` | **Projelerim** — yalnızca şantiyecinin projeleri; **Proje Kodu Talebi** butonu ve **Arşivlenenler** bölümü | Şantiyeci portalı |
+| `/modul/santiyeci/projeler/talep` | **Proje Kodu Talebi** — 4 blok form + mail/bildirim önizlemesi | Excel “proje kodu talep” |
+| `/modul/santiyeci/projeler/:id` | **Proje ekranı (şantiyeci)** — İhale Paketleri (yalnızca kendi paketleri) · Keşif · Dokümanlar · Dashboard · Proje Bilgileri; **Projeyi Düzenle / Arşivle** | Şantiyeci portalı |
+| `/modul/santiyeci/projeler/:id/paket/:paketId` | **İhale paketi detayı (şantiyeci)** — 4 pill sekme: **İhale Özeti · Belgeler · Keşif · Alt Yüklenici Firma Öneri** | Şantiyeci portalı |
+| `/modul/*/kesif` | **Keşif** — içerik şimdilik boş (Sözleşmeye Dönüşmüş Keşifler alt başlığı kaldırıldı) | |
 | `/bildirimler` | Bildirim listesi (bildirim no + fonksiyon adı) + bildirim kataloğu | Bildirim kataloğu |
 | `/profilim` | Profilim — kişisel ve görev bilgileri | Kullanıcı profili |
 | `/kesif/sozlesmeler` | **Sözleşmeye Dönüşmüş Keşifler** — sözleşmeye bağlanmış metraj kayıtları (herkese açık) | Erişim kuralları |

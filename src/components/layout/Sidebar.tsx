@@ -1,23 +1,27 @@
 import { useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { navGroups } from '../../lib/nav'
+import { modulNav } from '../../lib/nav'
+import type { ModuleId } from '../../lib/modul'
 import { Icon } from '../ui/Icon'
 
 /* Sidebar panosu: siyah zemin · beyaz ikon/metin · 16px köşe
    Daraltılmış hâlde yalnızca ikon rayı görünür. */
 export function Sidebar({
+  modul,
   collapsed,
   onToggle,
   onNavigate,
 }: {
+  modul: ModuleId
   collapsed: boolean
   onToggle: () => void
   onNavigate?: () => void
 }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const navGroups = modulNav(modul)
   const [openGroups, setOpenGroups] = useState<string[]>(() =>
-    navGroups
+    modulNav(modul)
       .filter((g) => g.children?.some((c) => c.to !== '/' && location.pathname.startsWith(c.to)))
       .map((g) => g.label),
   )

@@ -125,6 +125,10 @@ export type Proje = {
   /** Projeye atanan kullanıcı id'leri (şantiyeci erişim kapsamı) */
   atananKullanicilar?: string[]
   ihaleEkipAtanan?: string
+  /** Arşivlendi mi? (şantiyeci modülü) */
+  arsivlendi?: boolean
+  /** Arşivleme tarihi */
+  arsivTarihi?: string
   /** Proje Kartı alan id → değer */
   kart: Record<string, string>
   /** İhale Dosyası alan id → değer */
@@ -194,6 +198,8 @@ export type IhalePaketi = {
   sozlesmeTuru?: 'alt-yuklenici' | 'kisa-sozlesme' | 'proje-hizmetleri' | 'satinalma'
   /** İhale paketinden sorumlu kişi (kullanıcı id) */
   sorumluId?: string
+  /** Paketi oluşturan kullanıcı (şantiyeci kapsamı) */
+  olusturanId?: string
   /** Yayınlandı mı? (yayın öncesi eksik alan uyarısı gösterilir) */
   yayinDurumu?: 'yayinda'
   /** Kullanıcı tarafından eklenen / yeniden adlandırılan klasörler */

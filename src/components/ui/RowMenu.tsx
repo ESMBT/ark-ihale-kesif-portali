@@ -8,6 +8,8 @@ export type MenuItem = {
   /** Soru işareti — henüz ekranı olmayan aksiyonlar için */
   soru?: boolean
   danger?: boolean
+  /** Pasif — tıklanamaz */
+  disabled?: boolean
 }
 
 /** Satır sonundaki "⋮" menüsü */
@@ -43,16 +45,23 @@ export function RowMenu({ items, label = 'Daha fazla işlem' }: { items: MenuIte
           {items.map((item) => (
             <button
               key={item.label}
+              disabled={item.disabled}
               onClick={(e) => {
                 e.stopPropagation()
                 setAcik(false)
                 item.onSelect?.()
               }}
-              className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[14px] transition-colors hover:bg-surface-muted ${
-                item.danger ? 'text-danger-d' : 'text-ink'
+              className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[14px] transition-colors ${
+                item.disabled
+                  ? 'cursor-not-allowed text-gray opacity-60'
+                  : `hover:bg-surface-muted ${item.danger ? 'text-danger-d' : 'text-ink'}`
               }`}
             >
-              <Icon name={item.icon} size={16} className={item.danger ? 'text-danger-d' : 'text-gray'} />
+              <Icon
+                name={item.icon}
+                size={16}
+                className={item.disabled ? 'text-gray' : item.danger ? 'text-danger-d' : 'text-gray'}
+              />
               {item.label}
               {item.soru && <Icon name="help" size={13} className="ml-auto text-gray" />}
             </button>

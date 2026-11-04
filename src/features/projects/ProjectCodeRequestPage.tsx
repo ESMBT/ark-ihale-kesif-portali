@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { aktifModul, modulYolu } from '../../lib/modul'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -22,6 +23,9 @@ import {
 
 export function ProjectCodeRequestPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  /* Talep ekranı her iki modülde de aynıdır; hangi modülde açıldığına göre yönlendirilir */
+  const modul = aktifModul(location.pathname)
   const { talepOlustur } = useStore()
 
   const [kart, setKart] = useState<Record<string, string>>({})
@@ -65,7 +69,7 @@ export function ProjectCodeRequestPage() {
     })
     setOnizlemeOpen(false)
     setGonderildi(true)
-    window.setTimeout(() => navigate('/projeler'), 1400)
+    window.setTimeout(() => navigate(modulYolu(modul, '/projeler')), 1400)
   }
 
   return (
@@ -73,7 +77,7 @@ export function ProjectCodeRequestPage() {
       <PageHeader
         title="Proje Kodu Talebi"
         breadcrumb={[
-          { label: 'Projeler', to: '/projeler' },
+          { label: 'Projeler', to: modulYolu(modul, '/projeler') },
           { label: 'Proje Kodu Talebi' },
         ]}
         actions={

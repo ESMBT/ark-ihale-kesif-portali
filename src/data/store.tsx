@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import {
   AKIF_KULLANICI_ID,
+  SANTIYECI_ADI,
   bildirimler as baslangicBildirimler,
   projeler as baslangicProjeler,
   sapUzmani,
@@ -40,6 +41,10 @@ type Store = {
   projeler: Proje[]
   /** Şantiyeci erişim kapsamı: kendi oluşturduğu veya atandığı projeler */
   goruntulenenProjeler: Proje[]
+  /** Şantiyeci modülü kapsamı — yalnızca şantiyecinin projeleri */
+  santiyeciProjeler: Proje[]
+  /** Şantiyecinin arşivlediği projeler */
+  santiyeciArsivProjeler: Proje[]
   bildirimler: Bildirim[]
   /* Kullanıcı ve ekip yönetimi */
   kullanicilar: Kullanicilar[]
@@ -97,6 +102,8 @@ type Store = {
   paketKlasorYenidenAdlandir: (projeId: string, paketId: string, id: string, ad: string) => void
   paketAlanGuncelle: (projeId: string, paketId: string, alanlar: Record<string, string>) => void
   paketSil: (projeId: string, paketId: string) => void
+  projeArsivle: (projeId: string) => void
+  projeArsivleGeriAl: (projeId: string) => void
   soruEkle: (projeId: string, paketId: string, soru: string, soran: string) => void
   soruCevapla: (projeId: string, paketId: string, soruId: string, cevap: string, cevaplayan: string) => void
   ihaleAksiyonu: (
@@ -144,6 +151,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
    * Şantiyeci yalnızca kendi oluşturduğu veya kendisine atanan projeleri görür.
    * İhale ekibi gibi üst roller için tüm projeler listelenir.
    */
+  /** Şantiyeci modülü — yalnızca şantiyecinin kendi projeleri */
+  const santiyeciProjeler = useMemo(
+    () =>
+      projeler.filter(
+        (p) =>
+          !p.arsivlendi &&
+          (p.sahip === SANTIYECI_ADI || p.atananKullanicilar?.includes(AKIF_KULLANICI_ID)),
+      ),
+    [projeler],
+  )
+
+  /** Arşivlenen şantiyeci projeleri */
+  const santiyeciArsivProjeler = useMemo(
+    () =>
+      projeler.filter(
+        (p) =>
+          p.arsivlendi &&
+          (p.sahip === SANTIYECI_ADI || p.atananKullanicilar?.includes(AKIF_KULLANICI_ID)),
+      ),
+    [projeler],
+  )
+
   const goruntulenenProjeler = useMemo(
     () =>
       projeler.filter(
@@ -313,6 +342,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   alanlar: alanlar ?? {},
                   sozlesmeTuru,
                   sorumluId,
+                  olusturanId: AKIF_KULLANICI_ID,
                 },
               ],
               aktivite: [...p.aktivite, { tarih: simdi(), metin: `Yeni ihale paketi oluşturuldu — ${ad}`, ikon: 'plus' }],
@@ -674,15 +704,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  /** Paket yalnızca taslak durumundayken silinebilir (yayınlandıysa ihale ekibi iptal eder) */
   const paketSil = useCallback((projeId: string, paketId: string) => {
+    setProjeler((prev) =>
+      prev.map((p) => {
+        if (p.id !== projeId) return p
+        const paket = p.paketler.find((k) => k.id === paketId)
+        if (!paket || paket.durum !== 'taslak') return p
+        return {
+          ...p,
+          paketler: p.paketler.filter((k) => k.id !== paketId),
+          guncellemeTarihi: simdi(),
+          aktivite: [...p.aktivite, { tarih: simdi(), metin: 'İhale paketi silindi', ikon: 'trash' }],
+        }
+      }),
+    )
+  }, [])
+
+  /** Projeyi arşivle (şantiyeci modülü) */
+  const projeArsivle = useCallback((projeId: string) => {
     setProjeler((prev) =>
       prev.map((p) =>
         p.id === projeId
           ? {
               ...p,
-              paketler: p.paketler.filter((k) => k.id !== paketId),
+              arsivlendi: true,
+              arsivTarihi: simdi().split(' · ')[0],
               guncellemeTarihi: simdi(),
-              aktivite: [...p.aktivite, { tarih: simdi(), metin: 'İhale paketi silindi', ikon: 'trash' }],
+              aktivite: [...p.aktivite, { tarih: simdi(), metin: 'Proje arşivlendi', ikon: 'trash' }],
+            }
+          : p,
+      ),
+    )
+  }, [])
+
+  /** Arşivden geri al */
+  const projeArsivleGeriAl = useCallback((projeId: string) => {
+    setProjeler((prev) =>
+      prev.map((p) =>
+        p.id === projeId
+          ? {
+              ...p,
+              arsivlendi: false,
+              arsivTarihi: undefined,
+              guncellemeTarihi: simdi(),
+              aktivite: [...p.aktivite, { tarih: simdi(), metin: 'Proje arşivden çıkarıldı', ikon: 'refresh' }],
             }
           : p,
       ),
@@ -972,6 +1038,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       projeler,
       goruntulenenProjeler,
+      santiyeciProjeler,
+      santiyeciArsivProjeler,
       bildirimler,
       kullanicilar,
       ekipler,
@@ -997,6 +1065,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       paketEkle,
       paketAlanGuncelle,
       paketSil,
+      projeArsivle,
+      projeArsivleGeriAl,
       paketYayinla,
       paketOnayaGonder,
       paketOnayTamamla,
@@ -1024,6 +1094,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [
       projeler,
       goruntulenenProjeler,
+      santiyeciProjeler,
+      santiyeciArsivProjeler,
       bildirimler,
       kullanicilar,
       ekipler,
@@ -1049,6 +1121,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       paketEkle,
       paketAlanGuncelle,
       paketSil,
+      projeArsivle,
+      projeArsivleGeriAl,
       paketYayinla,
       paketOnayaGonder,
       paketOnayTamamla,

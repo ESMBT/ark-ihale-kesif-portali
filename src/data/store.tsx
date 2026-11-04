@@ -90,6 +90,7 @@ type Store = {
     firma: string,
     mail: string,
     yetkili: string,
+    maliSorumlu: string,
     not: string,
   ) => void
   paketKlasorEkle: (projeId: string, paketId: string, ad: string) => void
@@ -626,7 +627,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   /** Şantiyecinin önerdiği firma — kayıt "önerildi" durumuyla açılır */
   const firmaOnerTalebi = useCallback(
-    (projeId: string, paketId: string, firma: string, mail: string, yetkili: string, not: string) => {
+    (
+      projeId: string,
+      paketId: string,
+      firma: string,
+      mail: string,
+      yetkili: string,
+      maliSorumlu: string,
+      not: string,
+    ) => {
       setProjeler((prev) =>
         prev.map((p) =>
           p.id === projeId
@@ -647,7 +656,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                             yetkiBelgesi: 'Talep edildi',
                             vergiLevhasi: 'Talep edildi',
                             iletisim: mail,
-                            not: not ? `${yetkili} — ${not}` : yetkili,
+                            maliSorumlu,
+                            not: [yetkili, maliSorumlu, not].filter(Boolean).join(' — '),
                             durum: 'onaya-gonderilmedi' as const,
                             degerlendirme: 'portalda-yok' as const,
                           },

@@ -358,11 +358,16 @@ Arama alanı, **Yaklaşık Proje İhale Bedeli** ve firma listesi **tek tablo** 
   1. **Paketeki firmalar** — X ile çıkarılır, firma adına tıklanınca **Firma Detayı** açılır, durum/tarih gösterilir.
   2. **Şantiyecinin önerdiği firmalar** — salt okunur, **“Önerildi”** rozeti ve *Portal kaydı yok* işareti.
 - **Firma Öner** yapısı **şantiyeci tarafındadır**; bu nedenle Alt Yüklenici Yönetimi ekranından kaldırıldı ve
-  **paketin Genel Bakış sekmesine** taşındı. Orada “Firma Öner” kartı üzerinden: firma ünvanı · mail adresi ·
-  yetkili kişi · **SAP Sorumlusu** (SAP’de karşılayacak yetkili) · **Mail Başlığı · Cc** · **Vergi Levhası** ve
-  **Firma Bilgileri Formu** dosyaları · **Notlar** (varsayılan metin: *“Firmanın incelenip kabul görmesi durumunda
-  SAP kaydının yapılmasını talep ediyoruz.”*). Gönderimde ek dosyalar notla birlikte iletilir; kayıt **“Önerildi”**
-  rozetiyle hem Genel Bakış’ta hem Alt Yüklenici tablosunda görünür.
+  **paketin Genel Bakış sekmesine** taşındı. Bu ekran **yalnızca firmaya mail göndermek** içindir:
+  · **Firma Ünvanı** · **Firma Mail Adresi** · **Firma Yetkili Kişisi** · **Mali Sorumlu** (proje kartındaki
+  muhasebe yetkilisi / mali işler + genel mali sorumlular) · **Mail Başlığı** · **Cc** · **Notlar**
+  · **Mail Başlığı** firma ünvanı yazıldıkça otomatik dolar: *“Firma Önerisi — Portal Kayıt Talebi — {ünvan}”*
+  · **Mali Sorumlu** seçilince **Cc** alanına mali sorumlunun maili otomatik eklenir
+  · **Notlar** varsayılan: *“Firmanızın incelenip kabul görmesi için lütfen bize vergi levhası ve firma bilgileri
+  formunu iletiniz.”*
+  · **Vergi Levhası** ve **Firma Bilgileri Formu** bu ekranda **yüklenmez** — firma mail karşılığında iletir;
+  mali sorumlu (cc) belgeleri inceleyip SAP onayını yapar ve SAP kaydını oluşturur. Öneri gönderildikten sonra
+  portalde takip yapılmaz. Kayıt **“Önerildi”** rozetiyle Genel Bakış’ta ve Alt Yüklenici tablosunda görünür.
 
 **İki durum ekseni**
 - *Ön değerlendirme (finansal)* → işaret + etiket: **Başarılı (mavi ✓)** · **Başarısız (kırmızı ✕)** ·

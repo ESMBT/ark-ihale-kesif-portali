@@ -277,6 +277,8 @@ export type AltYuklenici = {
   onaylanmaTarihi?: string
   /** Öneri notu */
   not?: string
+  /** Mali sorumlu (öneri mailinde cc) */
+  maliSorumlu?: string
   /** Ön değerlendirme durumu (finansal) */
   degerlendirme?: DegerlendirmeDurumu
   /** Ön değerlendirme puanı (0-100) */

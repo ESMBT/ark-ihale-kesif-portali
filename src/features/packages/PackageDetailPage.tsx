@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -219,11 +219,20 @@ function PaketGenelBakis({
   proje,
   paket,
 }: {
-  proje: { id: string }
+  proje: { id: string; kart?: Record<string, string> }
   paket: IhalePaketi
 }) {
   const { firmaOnerTalebi } = useStore()
   const [onerModal, setOnerModal] = useState(false)
+
+  /** Proje kartındaki mali sorumlular (muhasebe yetkilisi + mali işler) */
+  const maliSorumluler = useMemo(
+    () =>
+      [proje.kart?.muhasebeYetkilisi, proje.kart?.maliIsler].filter(
+        (v): v is string => !!v && v.trim() !== '',
+      ),
+    [proje],
+  )
 
   return (
     <div className="space-y-5">
@@ -250,6 +259,11 @@ function PaketGenelBakis({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-medium text-foreground">{a.firma}</span>
                   <span className="block truncate text-[12px] text-muted-foreground">{a.iletisim}</span>
+                  {a.maliSorumlu && (
+                    <span className="block truncate text-[12px] text-muted-foreground">
+                      Mali sorumlu: {a.maliSorumlu}
+                    </span>
+                  )}
                 </span>
                 <Badge tone="warning" size="sm">
                   Önerildi
@@ -263,7 +277,10 @@ function PaketGenelBakis({
       <FirmaOnerModal
         open={onerModal}
         onClose={() => setOnerModal(false)}
-        onOner={(firma, mail, yetkili, not) => firmaOnerTalebi(proje.id, paket.id, firma, mail, yetkili, not)}
+        maliSorumluler={maliSorumluler}
+        onOner={(firma, mail, yetkili, maliSorumlu, not) =>
+          firmaOnerTalebi(proje.id, paket.id, firma, mail, yetkili, maliSorumlu, not)
+        }
       />
     </div>
   )

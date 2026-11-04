@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../../data/store'
 import { sirketler } from '../../data/mock'
 import { Icon } from '../ui/Icon'
+import { aktifModul, modulYolu } from '../../lib/modul'
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const [showNotifications, setShowNotifications] = useState(false)
@@ -13,8 +14,9 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const unread = bildirimler.filter((n) => !n.okundu).length
 
   /* Proje ekranındayken proje seçici, diğer ekranlarda şirket seçici */
-  const projeId = location.pathname.match(/^\/projeler\/([^/]+)/)?.[1]
-  const projeModu = !!projeId && location.pathname !== '/projeler/talep'
+  const modul = aktifModul(location.pathname)
+  const projeId = location.pathname.match(/\/projeler\/([^/]+)/)?.[1]
+  const projeModu = !!projeId && !location.pathname.endsWith('/talep')
   const aktifProje = projeModu ? projeler.find((p) => p.id === projeId) : undefined
 
   return (
@@ -42,7 +44,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             </span>
             <select
               value={projeId ?? ''}
-              onChange={(e) => navigate(`/projeler/${e.target.value}`)}
+              onChange={(e) => navigate(modulYolu(modul, `/projeler/${e.target.value}`))}
               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               aria-label="Proje seçici"
             >
@@ -172,7 +174,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                 Hesap ayarları
               </span>
               <Link
-                to="/projeler"
+                to={modulYolu(modul, '/projeler')}
                 className="flex items-center gap-2.5 border-t border-line px-4 py-2.5 text-[14px] text-danger-d hover:bg-surface-muted"
               >
                 <Icon name="log-out" size={16} />

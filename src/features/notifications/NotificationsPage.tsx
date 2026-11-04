@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card, CardHeader } from '../../components/ui/Card'
@@ -7,6 +7,7 @@ import { Alert, EmptyState, PageHeader, StatTile } from '../../components/ui/Fee
 import { Icon } from '../../components/ui/Icon'
 import { bildirimKatalog } from '../../data/mock'
 import { useStore } from '../../data/store'
+import { aktifModul, modulYolu } from '../../lib/modul'
 import type { Bildirim } from '../../data/types'
 
 const tipTone = {
@@ -24,6 +25,7 @@ const tipLabel = {
 } as const
 
 export function NotificationsPage() {
+  const location = useLocation()
   const { bildirimler, bildirimOkundu, tumBildirimlerOkundu } = useStore()
   const [rol, setRol] = useState('tumu')
 
@@ -111,7 +113,7 @@ export function NotificationsPage() {
                           <span>Alıcı rol: {b.hedefRol}</span>
                           {b.projeId && (
                             <Link
-                              to={`/projeler/${b.projeId}`}
+                              to={modulYolu(aktifModul(location.pathname), `/projeler/${b.projeId}`)}
                               className="font-medium text-black underline underline-offset-2"
                               onClick={() => bildirimOkundu(b.id)}
                             >

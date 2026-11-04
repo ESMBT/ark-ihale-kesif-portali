@@ -16,6 +16,7 @@ import { useStore } from '../../data/store'
 import type { IhalePaketi } from '../../data/types'
 import { PackageCreateModal } from '../packages/PackageCreateModal'
 import { PackagePublishModal } from '../packages/PackagePublishModal'
+import { modulYolu } from '../../lib/modul'
 import { ProjectEditModal, ProjectInfoSummary } from './ProjectEditModal'
 
 const sekmeler = [
@@ -51,7 +52,7 @@ export function ProjectDetailPage() {
         <div className="flex flex-col items-center gap-3 py-10 text-center">
           <Icon name="search" size={28} className="text-gray" />
           <h4>Proje bulunamadı</h4>
-          <Button variant="secondary" icon="arrow-left" onClick={() => navigate('/projeler')}>
+          <Button variant="secondary" icon="arrow-left" onClick={() => navigate(modulYolu('ihale', '/projeler'))}>
             Proje listesine dön
           </Button>
         </div>
@@ -71,7 +72,7 @@ export function ProjectDetailPage() {
           <p className="max-w-md text-[13px] leading-5 text-muted-foreground">
             Yalnızca size atanmış veya kendinizin oluşturduğu projeleri görüntüleyebilirsiniz.
           </p>
-          <Button variant="secondary" icon="arrow-left" onClick={() => navigate('/projeler')}>
+          <Button variant="secondary" icon="arrow-left" onClick={() => navigate(modulYolu('ihale', '/projeler'))}>
             Proje listesine dön
           </Button>
         </div>
@@ -179,7 +180,7 @@ export function ProjectDetailPage() {
                           variant="brand"
                           size="sm"
                           icon="open"
-                          onClick={() => navigate(`/projeler/${proje.id}/paket/${k.id}`)}
+                          onClick={() => navigate(modulYolu('ihale', `/projeler/${proje.id}/paket/${k.id}`))}
                         >
                           Aç
                         </Button>

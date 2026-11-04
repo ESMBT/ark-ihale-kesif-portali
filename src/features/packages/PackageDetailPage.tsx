@@ -16,6 +16,7 @@ import { QuestionAnswerTab } from './QuestionAnswerTab'
 import { IhaleOzeti } from './IhaleOzeti'
 import { FirmaOnerModal } from './FirmaOnerModal'
 import { PackagePublishModal } from './PackagePublishModal'
+import { modulYolu } from '../../lib/modul'
 
 export function PackageDetailPage() {
   const { id, paketId } = useParams()
@@ -37,7 +38,7 @@ export function PackageDetailPage() {
         <div className="flex flex-col items-center gap-3 py-10 text-center">
           <Icon name="search" size={28} className="text-gray" />
           <h4>İhale paketi bulunamadı</h4>
-          <Button variant="secondary" icon="arrow-left" onClick={() => navigate('/projeler')}>
+          <Button variant="secondary" icon="arrow-left" onClick={() => navigate(modulYolu('ihale', '/projeler'))}>
             Proje listesine dön
           </Button>
         </div>
@@ -52,7 +53,7 @@ export function PackageDetailPage() {
       <div className="mb-6 flex flex-wrap items-center gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            to={`/projeler/${proje.id}`}
+            to={modulYolu('ihale', `/projeler/${proje.id}`)}
             className="text-[15px] font-bold tracking-wide text-muted-foreground uppercase hover:text-black"
           >
             {proje.ad}

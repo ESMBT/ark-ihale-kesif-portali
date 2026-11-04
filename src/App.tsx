@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
 
 import { ModulePickerPage } from './features/modules/ModulePickerPage'
@@ -19,6 +19,20 @@ import { KesifBosSayfa } from './features/kesif/KesifBosSayfa'
 import { SantiyeciProjectListPage } from './features/santiyeci/SantiyeciProjectListPage'
 import { SantiyeciProjectDetailPage } from './features/santiyeci/SantiyeciProjectDetailPage'
 import { SantiyeciPackageDetailPage } from './features/santiyeci/SantiyeciPackageDetailPage'
+
+/**
+ * Eski adresler → modül adresleri (parametreler korunur).
+ * React Router `<Navigate to>` parametre interpolasyonu yapmadığı için elle kurulur.
+ */
+function EskiAdres({ hedef }: { hedef: 'proje' | 'paket' | 'talep' | 'liste' }) {
+  const { id, paketId } = useParams()
+  if (hedef === 'talep') return <Navigate to="/modul/santiyeci/projeler/talep" replace />
+  if (hedef === 'liste') return <Navigate to="/modul/ihale/projeler" replace />
+  if (hedef === 'paket') {
+    return <Navigate to={`/modul/ihale/projeler/${id}/paket/${paketId}`} replace />
+  }
+  return <Navigate to={`/modul/ihale/projeler/${id}`} replace />
+}
 
 export default function App() {
   return (
@@ -60,13 +74,10 @@ export default function App() {
         <Route path="/kesif/sozlesmeler" element={<ContractedTakeoffPage />} />
 
         {/* Eski yollar → ihale modülüne yönlendirilir */}
-        <Route path="/projeler" element={<Navigate to="/modul/ihale/projeler" replace />} />
-        <Route path="/projeler/talep" element={<Navigate to="/modul/santiyeci/projeler/talep" replace />} />
-        <Route path="/projeler/:id" element={<Navigate to="/modul/ihale/projeler/:id" replace />} />
-        <Route
-          path="/projeler/:id/paket/:paketId"
-          element={<Navigate to="/modul/ihale/projeler/:id/paket/:paketId" replace />}
-        />
+        <Route path="/projeler" element={<EskiAdres hedef="liste" />} />
+        <Route path="/projeler/talep" element={<EskiAdres hedef="talep" />} />
+        <Route path="/projeler/:id" element={<EskiAdres hedef="proje" />} />
+        <Route path="/projeler/:id/paket/:paketId" element={<EskiAdres hedef="paket" />} />
 
         <Route path="*" element={<Navigate to="/moduller" replace />} />
       </Route>

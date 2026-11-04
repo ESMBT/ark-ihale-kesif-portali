@@ -88,6 +88,8 @@ export function InviteCompaniesTab({
   onYaklasikBedel: (deger: { tutar: string; paraBirimi: string; avansOrani: string }) => void
 }) {
   const [arama, setArama] = useState('')
+  /* Arama sonuçları arama kutusunun altında açılan panelde gösterilir */
+  const [aramaPaneli, setAramaPaneli] = useState(false)
   const [onayaGonderilen, setOnayaGonderilen] = useState<AltYuklenici | null>(null)
   const [detayFirma, setDetayFirma] = useState<AltYuklenici | null>(null)
   const [davetModal, setDavetModal] = useState(false)
@@ -156,10 +158,10 @@ export function InviteCompaniesTab({
     )
   }, [arama])
 
-  /** Tablo — paketteki firmalar + arama sonuçları (tek liste) */
+  /** Tablo — paketteki firmalar + şantiyeci önerileri */
   const liste = paket.altYukleniciler
-  /** Arama sonuçlarından pakete eklenmemiş olanlar */
-  const aramaSatirlari = aramaSonuclari.filter(
+  /** Arama sonuçlarından pakete eklenmemiş olanlar (açılır panelde gösterilir) */
+  const aramaSonuclariYeni = aramaSonuclari.filter(
     (a) => !paket.altYukleniciler.some((p) => p.id === a.id),
   )
   /** Davet gönderilebilecek firmalar — yalnızca onaylanmış olanlar */
@@ -203,10 +205,60 @@ export function InviteCompaniesTab({
             />
             <Input
               value={arama}
-              onChange={(e) => setArama(e.target.value)}
+              onFocus={() => setAramaPaneli(true)}
+              onBlur={() => window.setTimeout(() => setAramaPaneli(false), 150)}
+              onChange={(e) => {
+                setArama(e.target.value)
+                setAramaPaneli(true)
+              }}
               placeholder="Firma veya uzmanlık ile ara..."
               className="pl-9 text-[13px]"
+              aria-expanded={aramaPaneli && arama.trim() !== ''}
             />
+
+            {/* Arama sonuçları — arama kutusunun altında açılan panel */}
+            {aramaPaneli && arama.trim() !== '' && (
+              <div className="absolute top-full left-0 z-20 mt-1 max-h-[320px] w-full overflow-y-auto rounded-lg border border-line bg-white shadow-lg">
+                {aramaSonuclariYeni.length === 0 ? (
+                  <p className="px-3 py-3 text-[13px] text-muted-foreground">
+                    {aramaSonuclari.length === 0
+                      ? 'Firma bulunamadı.'
+                      : 'Bu firma zaten pakete eklendi.'}
+                  </p>
+                ) : (
+                  aramaSonuclariYeni.map((a) => {
+                    const d = degerlendirmeBilgi[a.degerlendirme ?? 'bekliyor']
+                    return (
+                      <button
+                        key={a.id}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setOnayaGonderilen(a)
+                          setOnaylayanlar(makamlar.map((m) => m.id))
+                          setAramaPaneli(false)
+                        }}
+                        className="flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left last:border-0 hover:bg-surface-muted"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5">
+                            <Icon name={d.ikon} size={14} className={`shrink-0 ${d.renk}`} />
+                            <span className="truncate text-[14px] font-medium text-foreground">
+                              {a.firma}
+                            </span>
+                          </span>
+                          <span className="block truncate text-[12px] text-muted-foreground">
+                            {a.uzmanlik} · {a.iletisim}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-[13px] font-bold text-foreground">{a.skor}</span>
+                        <Icon name="star" size={14} className="shrink-0 text-gray" />
+                        <Icon name="arrow-right" size={14} className="shrink-0 text-ink" />
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-end gap-2">
@@ -240,7 +292,7 @@ export function InviteCompaniesTab({
         </div>
 
         {/* Tek tablo — paketteki firmalar + arama sonuçları + öneriler */}
-        {liste.length === 0 && aramaSatirlari.length === 0 && onerilenler.length === 0 ? (
+        {liste.length === 0 && onerilenler.length === 0 ? (
           <EmptyState
             icon="search"
             title={arama ? 'Firma bulunamadı' : 'Firma veya uzmanlık ile arayın'}
@@ -352,65 +404,6 @@ export function InviteCompaniesTab({
                           }`}
                         >
                           <Icon name="send" size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-
-                {/* Arama sonuçları — pakete eklenmemiş firmalar */}
-                {aramaSatirlari.map((a) => {
-                  const d = degerlendirmeBilgi[a.degerlendirme ?? 'bekliyor']
-                  return (
-                    <tr key={a.id} className="border-b border-border last:border-0">
-                      <td className="px-3 py-2.5" />
-                      <td className="px-1 py-2.5">
-                        <span className="flex items-center gap-1.5">
-                          <span title={d.label}>
-                            <Icon name={d.ikon} size={14} className={`shrink-0 ${d.renk}`} />
-                          </span>
-                          <span className="truncate text-[14px] font-medium text-foreground">
-                            {a.firma}
-                          </span>
-                        </span>
-                      </td>
-                      <td className="px-2 py-2.5">
-                        <span className="block truncate text-[13px] text-muted-foreground">
-                          {a.uzmanlik}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2.5">
-                        <span className="inline-flex items-center gap-1">
-                          <span className="text-[13px] font-bold text-foreground">{a.skor}</span>
-                          <Icon name="star" size={13} className="text-gray" />
-                        </span>
-                      </td>
-                      <td className="px-2 py-2.5">
-                        <span
-                          className="inline-flex max-w-full items-center gap-1.5 text-[13px] text-foreground"
-                          title={d.label}
-                        >
-                          <Icon name={d.ikon} size={15} className={`shrink-0 ${d.renk}`} />
-                          <span className="truncate">{d.label}</span>
-                        </span>
-                      </td>
-                      <td className="px-2 py-2.5">
-                        <StatusPill label="Onaya gönderilmedi" tone="gray" />
-                      </td>
-                      <td className="px-2 py-2.5">
-                        <span className="block text-[12px] text-foreground">—</span>
-                      </td>
-                      <td className="px-3 py-2.5 text-right">
-                        <button
-                          onClick={() => {
-                            setOnayaGonderilen(a)
-                            setOnaylayanlar(makamlar.map((m) => m.id))
-                          }}
-                          title="Onaya gönder"
-                          aria-label={`${a.firma} firmasını onaya gönder`}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-white text-ink transition-colors hover:bg-surface-muted"
-                        >
-                          <Icon name="arrow-right" size={14} />
                         </button>
                       </td>
                     </tr>

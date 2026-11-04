@@ -348,11 +348,13 @@ Arama alanı, **Yaklaşık Proje İhale Bedeli** ve firma listesi **tek tablo** 
   `ihAvans`, teminat oranı `ihKesinTeminatOrani` alanından okunur ve onay özetine otomatik gelir.)
 - **Tek tablo kolonları:** `X (listeden çıkar)` · **Firma** · **Uzmanlık** · **Skor** · **Değerlendirme** ·
   **Onay Durumu** · **Tarih** · **davet gönder**.
-- Tablo üç tip satırı içerir:
+- **Arama sonuçları tabloya eklenmez**; arama kutusuna yazıldıkça **arama kutusunun altında açılan panelde**
+  (dropdown) gösterilir: değerlendirme işareti · firma adı · uzmanlık · e-posta · skor · yıldız · **sağ ok**.
+  Paneldeki bir satıra tıklanınca doğrudan **“Onaya Gönder”** penceresi açılır; pencere kapanınca panel de kapanır.
+  Pakette zaten olan firma arama sonucunda tekrar listelenmez (“Bu firma zaten pakete eklendi.”).
+- Tablo iki tip satırı içerir:
   1. **Paketeki firmalar** — X ile çıkarılır, firma adına tıklanınca **Firma Detayı** açılır, durum/tarih gösterilir.
-  2. **Arama sonuçları** (pakete eklenmemiş sistem firmaları) — skor + yıldız, onay durumu **“Onaya gönderilmedi”**,
-     **sağ ok** ile onaya gönderilir. Pakette zaten olan bir firma arama sonucunda tekrar görünmez.
-  3. **Şantiyecinin önerdiği firmalar** — salt okunur, **“Önerildi”** rozeti ve *Portal kaydı yok* işareti.
+  2. **Şantiyecinin önerdiği firmalar** — salt okunur, **“Önerildi”** rozeti ve *Portal kaydı yok* işareti.
 - **Firma Öner** yapısı **şantiyeci tarafındadır**; bu nedenle Alt Yüklenici Yönetimi ekranından kaldırıldı ve
   **paketin Genel Bakış sekmesine** taşındı. Orada “Firma Öner” kartı üzerinden: firma ünvanı · mail adresi ·
   yetkili kişi · **SAP Sorumlusu** (SAP’de karşılayacak yetkili) · **Mail Başlığı · Cc** · **Vergi Levhası** ve

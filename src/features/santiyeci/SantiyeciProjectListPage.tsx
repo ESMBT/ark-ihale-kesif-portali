@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -29,18 +29,21 @@ export function SantiyeciProjectListPage() {
   const [arsivlenecek, setArsivlenecek] = useState<Proje | null>(null)
   const [duzenlenecek, setDuzenlenecek] = useState<Proje | null>(null)
 
-  const filtre = (liste: Proje[]) => {
-    const q = query.trim().toLocaleLowerCase('tr')
-    return liste.filter(
-      (p) =>
-        !q ||
-        p.ad.toLocaleLowerCase('tr').includes(q) ||
-        (p.kart.projeKodu ?? '').toLocaleLowerCase('tr').includes(q),
-    )
-  }
+  const filtre = useCallback(
+    (liste: Proje[]) => {
+      const q = query.trim().toLocaleLowerCase('tr')
+      return liste.filter(
+        (p) =>
+          !q ||
+          p.ad.toLocaleLowerCase('tr').includes(q) ||
+          (p.kart.projeKodu ?? '').toLocaleLowerCase('tr').includes(q),
+      )
+    },
+    [query],
+  )
 
-  const projeler = useMemo(() => filtre(santiyeciProjeler), [santiyeciProjeler, query])
-  const arsivProjeler = useMemo(() => filtre(santiyeciArsivProjeler), [santiyeciArsivProjeler, query])
+  const projeler = useMemo(() => filtre(santiyeciProjeler), [filtre, santiyeciProjeler])
+  const arsivProjeler = useMemo(() => filtre(santiyeciArsivProjeler), [filtre, santiyeciArsivProjeler])
 
   const projeYolu = (id: string) => modulYolu('santiyeci', `/projeler/${id}`)
 

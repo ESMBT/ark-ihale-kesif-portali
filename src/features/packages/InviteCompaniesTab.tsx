@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -97,6 +97,27 @@ export function InviteCompaniesTab({
 
   /* Yaklaşık ihale bedeli (paket bazlı) — tutar ihale ekibi tarafından girilir */
   const [tutar, setTutar] = useState(paket.yaklasikIhaleBedeli?.tutar ?? '')
+  /* Kayıt geri bildirimi — kaydedildiğinde yeşil işaret bir süre görünür */
+  const [kaydedildi, setKaydedildi] = useState(false)
+  const kaydetZaman = useRef<number | null>(null)
+
+  useEffect(
+    () => () => {
+      if (kaydetZaman.current) window.clearTimeout(kaydetZaman.current)
+    },
+    [],
+  )
+
+  const bedeliKaydet = () => {
+    onYaklasikBedel({
+      tutar,
+      paraBirimi: paket.yaklasikIhaleBedeli?.paraBirimi ?? 'TRY',
+      avansOrani: paket.yaklasikIhaleBedeli?.avansOrani ?? '',
+    })
+    setKaydedildi(true)
+    if (kaydetZaman.current) window.clearTimeout(kaydetZaman.current)
+    kaydetZaman.current = window.setTimeout(() => setKaydedildi(false), 4000)
+  }
 
   /* Onaya gönderim modalı */
   const [onaylayanlar, setOnaylayanlar] = useState<string[]>([])
@@ -263,30 +284,41 @@ export function InviteCompaniesTab({
 
           <div className="flex items-end gap-2">
             <div>
-              <p className="mb-1 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
-                Yaklaşık Proje İhale Bedeli
-              </p>
+              <div className="mb-1 flex items-center gap-2">
+                <p className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
+                  Yaklaşık Proje İhale Bedeli
+                </p>
+                {kaydedildi ? (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success-soft px-1.5 py-0.5 text-[11px] font-bold text-success">
+                    <Icon name="check-circle" size={12} />
+                    Kaydedildi
+                  </span>
+                ) : paket.yaklasikIhaleBedeli?.tutar ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                    <Icon name="check-circle" size={12} className="text-success" />
+                    Kayıtlı
+                  </span>
+                ) : null}
+              </div>
               <div className="w-[200px]">
                 <Input
                   value={tutar}
-                  onChange={(e) => setTutar(e.target.value)}
+                  onChange={(e) => {
+                    setTutar(e.target.value)
+                    setKaydedildi(false)
+                  }}
                   placeholder="Tutar"
                   inputMode="decimal"
+                  className={kaydedildi ? 'border-success focus:border-success' : ''}
                 />
               </div>
             </div>
             <Button
-              variant="secondary"
-              icon="save"
-              onClick={() =>
-                onYaklasikBedel({
-                  tutar,
-                  paraBirimi: paket.yaklasikIhaleBedeli?.paraBirimi ?? 'TRY',
-                  avansOrani: paket.yaklasikIhaleBedeli?.avansOrani ?? '',
-                })
-              }
+              variant={kaydedildi ? 'primary' : 'secondary'}
+              icon={kaydedildi ? 'check-circle' : 'save'}
+              onClick={bedeliKaydet}
             >
-              Kaydet
+              {kaydedildi ? 'Kaydedildi' : 'Kaydet'}
             </Button>
           </div>
         </div>

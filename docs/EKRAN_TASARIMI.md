@@ -344,7 +344,9 @@ Paket detayındaki **“Belgeler”** sekmesi (Genel Bakış’tan hemen sonra) 
 Arama alanı, **Yaklaşık Proje İhale Bedeli** ve firma listesi **tek tablo** yapısında birleşmiştir.
 
 - **Üst şerit:** solda **arama** (“Firma veya uzmanlık ile ara…”), sağda **Yaklaşık Proje İhale Bedeli** →
-  yalnızca **tutar** → *Kaydet*. (Para birimi ve avans oranı bu ekrandan kaldırıldı; avans oranı ihale dosyasındaki
+  yalnızca **tutar** → *Kaydet*. **Kaydet** sonrası yeşil **“✓ Kaydedildi”** rozeti (4 sn), butonun
+  “Kaydedildi” hâline gelmesi ve tutar alanının yeşil çerçevesi; sonrasında kalıcı **“✓ Kayıtlı”** işareti.
+  (Para birimi ve avans oranı bu ekrandan kaldırıldı; avans oranı ihale dosyasındaki
   `ihAvans`, teminat oranı `ihKesinTeminatOrani` alanından okunur ve onay özetine otomatik gelir.)
 - **Tek tablo kolonları:** `X (listeden çıkar)` · **Firma** · **Uzmanlık** · **Skor** · **Değerlendirme** ·
   **Onay Durumu** · **Tarih** · **davet gönder**.

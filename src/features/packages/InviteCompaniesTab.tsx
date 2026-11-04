@@ -156,8 +156,12 @@ export function InviteCompaniesTab({
     )
   }, [arama])
 
-  /** Sağ panel — onaya gönderilmiş / onaylanmış / davet edilmiş firmalar */
+  /** Tablo — paketteki firmalar + arama sonuçları (tek liste) */
   const liste = paket.altYukleniciler
+  /** Arama sonuçlarından pakete eklenmemiş olanlar */
+  const aramaSatirlari = aramaSonuclari.filter(
+    (a) => !paket.altYukleniciler.some((p) => p.id === a.id),
+  )
   /** Davet gönderilebilecek firmalar — yalnızca onaylanmış olanlar */
   const davetEdilecekler = liste.filter((a) => a.durum === 'onaylandi')
 
@@ -173,30 +177,54 @@ export function InviteCompaniesTab({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.3fr)]">
-      {/* ---------------- SOL: Alt Yükleniciler ---------------- */}
+    <div className="space-y-4">
+      {/* ---------------- ALT YÜKLENİCİLER — TEK TABLO ---------------- */}
       <Card padded={false} className="min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h4 className="text-[17px] leading-6">Alt Yükleniciler</h4>
+          <Button
+            variant="brand"
+            size="sm"
+            icon="send"
+            disabled={davetEdilecekler.length === 0}
+            onClick={() => acilanDavet(davetEdilecekler.map((a) => a.id))}
+          >
+            Davet Et
+          </Button>
         </div>
 
-        {/* Yaklaşık ihale bedeli — tutar ihale ekibi tarafından girilir */}
-        <div className="border-b border-border px-4 py-3">
-          <p className="text-[12px] font-bold tracking-wide text-muted-foreground uppercase">
-            Yaklaşık Proje İhale Bedeli
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <div className="w-full max-w-[200px]">
-              <Input
-                value={tutar}
-                onChange={(e) => setTutar(e.target.value)}
-                placeholder="Tutar"
-                inputMode="decimal"
-              />
+        {/* Arama + Yaklaşık Proje İhale Bedeli — aynı şerit */}
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="relative min-w-[240px] flex-1">
+            <Icon
+              name="search"
+              size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray"
+            />
+            <Input
+              value={arama}
+              onChange={(e) => setArama(e.target.value)}
+              placeholder="Firma veya uzmanlık ile ara..."
+              className="pl-9 text-[13px]"
+            />
+          </div>
+
+          <div className="flex items-end gap-2">
+            <div>
+              <p className="mb-1 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
+                Yaklaşık Proje İhale Bedeli
+              </p>
+              <div className="w-[200px]">
+                <Input
+                  value={tutar}
+                  onChange={(e) => setTutar(e.target.value)}
+                  placeholder="Tutar"
+                  inputMode="decimal"
+                />
+              </div>
             </div>
             <Button
               variant="secondary"
-              size="sm"
               icon="save"
               onClick={() =>
                 onYaklasikBedel({
@@ -211,107 +239,16 @@ export function InviteCompaniesTab({
           </div>
         </div>
 
-        {/* Arama */}
-        <div className="border-b border-border px-4 py-3">
-          <div className="relative">
-            <Icon
-              name="search"
-              size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray"
-            />
-            <Input
-              value={arama}
-              onChange={(e) => setArama(e.target.value)}
-              placeholder="Firma veya uzmanlık ile ara..."
-              className="h-9 pl-9 text-[13px]"
-            />
-          </div>
-        </div>
-
-        {/* Sonuçlar */}
-        {aramaSonuclari.length === 0 && onerilenler.length === 0 ? (
+        {/* Tek tablo — paketteki firmalar + arama sonuçları + öneriler */}
+        {liste.length === 0 && aramaSatirlari.length === 0 && onerilenler.length === 0 ? (
           <EmptyState
             icon="search"
             title={arama ? 'Firma bulunamadı' : 'Firma veya uzmanlık ile arayın'}
             description={
               arama
-                ? 'Farklı bir ifade deneyin veya “Firma Öner” ile yeni firma önerin.'
-                : 'Sistemde tanımlı firmalar arama sonucu olarak listelenir. Firma yoksa “Firma Öner” ile bildirin.'
+                ? 'Farklı bir ifade deneyin veya Genel Bakış → “Firma Öner” ile yeni firma önerin.'
+                : 'Sistemde tanımlı firmalar arama sonucu olarak listelenir. Firma yoksa Genel Bakış → “Firma Öner” ile bildirin.'
             }
-          />
-        ) : (
-          <ul className="divide-y divide-border">
-            {/* Arama sonuçları */}
-            {aramaSonuclari.map((a) => {
-              const d = degerlendirmeBilgi[a.degerlendirme ?? 'bekliyor']
-              return (
-                <li key={a.id} className="flex items-center gap-3 px-4 py-3">
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5">
-                      <span title={d.label}>
-                        <Icon name={d.ikon} size={14} className={`shrink-0 ${d.renk}`} />
-                      </span>
-                      <span className="truncate text-[14px] font-medium text-foreground">{a.firma}</span>
-                    </span>
-                    <span className="block truncate text-[12px] text-muted-foreground">
-                      {a.uzmanlik} · {a.iletisim}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-[13px] font-bold text-foreground">{a.skor}</span>
-                  <Icon name="star" size={15} className="shrink-0 text-gray" />
-                  <button
-                    onClick={() => {
-                      setOnayaGonderilen(a)
-                      setOnaylayanlar(makamlar.map((m) => m.id))
-                    }}
-                    title="Onaya gönder"
-                    aria-label={`${a.firma} firmasını onaya gönder`}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-line bg-white text-ink transition-colors hover:bg-surface-muted"
-                  >
-                    <Icon name="arrow-right" size={14} />
-                  </button>
-                </li>
-              )
-            })}
-
-            {/* Şantiyecinin önerdiği firmalar */}
-            {onerilenler.map((a) => (
-              <li key={a.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium text-foreground">{a.firma}</span>
-                  <span className="block truncate text-[12px] text-muted-foreground">
-                    Şantiyeci önerisi · {a.iletisim}
-                  </span>
-                </span>
-                <Badge tone="warning" size="sm">
-                  Önerildi
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      {/* ---------------- SAĞ: Davet Edilecek Firmalar ---------------- */}
-      <Card padded={false} className="min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-          <h4 className="text-[17px] leading-6">Davet Edilecek Firmalar</h4>
-          <Button
-            variant="brand"
-            size="sm"
-            icon="send"
-            disabled={davetEdilecekler.length === 0}
-            onClick={() => acilanDavet(davetEdilecekler.map((a) => a.id))}
-          >
-            Davet Et
-          </Button>
-        </div>
-
-        {liste.length === 0 ? (
-          <EmptyState
-            icon="package"
-            title="Davet edilecek firma yok"
-            description="Sol taraftan arama yapıp firmayı seçin, onaya gönderin; onay sonrası davet gönderilebilir olur."
           />
         ) : (
           <div className="overflow-x-auto">
@@ -320,13 +257,16 @@ export function InviteCompaniesTab({
                 <tr className="border-b border-border text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
                   <th className="w-8 px-3 py-2" />
                   <th className="px-1 py-2 text-left whitespace-nowrap">Firma</th>
-                  <th className="w-[112px] px-2 py-2 text-left whitespace-nowrap">Değerlendirme</th>
-                  <th className="w-[146px] px-2 py-2 text-left whitespace-nowrap">Onay Durumu</th>
-                  <th className="w-[88px] px-2 py-2 text-left whitespace-nowrap">Tarih</th>
-                  <th className="w-11 px-3 py-2" />
+                  <th className="w-[150px] px-2 py-2 text-left whitespace-nowrap">Uzmanlık</th>
+                  <th className="w-[72px] px-2 py-2 text-left whitespace-nowrap">Skor</th>
+                  <th className="w-[158px] px-2 py-2 text-left whitespace-nowrap">Değerlendirme</th>
+                  <th className="w-[150px] px-2 py-2 text-left whitespace-nowrap">Onay Durumu</th>
+                  <th className="w-[100px] px-2 py-2 text-left whitespace-nowrap">Tarih</th>
+                  <th className="w-[60px] px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
+                {/* Paketteki firmalar */}
                 {liste.map((a) => {
                   const d = degerlendirmeBilgi[a.degerlendirme ?? 'bekliyor']
                   const o = onayDurumu[a.durum]
@@ -355,6 +295,16 @@ export function InviteCompaniesTab({
                         >
                           {a.firma}
                         </button>
+                      </td>
+
+                      <td className="px-2 py-2.5">
+                        <span className="block truncate text-[13px] text-muted-foreground">
+                          {a.uzmanlik}
+                        </span>
+                      </td>
+
+                      <td className="px-2 py-2.5">
+                        <span className="text-[13px] font-bold text-foreground">{a.skor}</span>
                       </td>
 
                       {/* Ön değerlendirme */}
@@ -407,6 +357,99 @@ export function InviteCompaniesTab({
                     </tr>
                   )
                 })}
+
+                {/* Arama sonuçları — pakete eklenmemiş firmalar */}
+                {aramaSatirlari.map((a) => {
+                  const d = degerlendirmeBilgi[a.degerlendirme ?? 'bekliyor']
+                  return (
+                    <tr key={a.id} className="border-b border-border last:border-0">
+                      <td className="px-3 py-2.5" />
+                      <td className="px-1 py-2.5">
+                        <span className="flex items-center gap-1.5">
+                          <span title={d.label}>
+                            <Icon name={d.ikon} size={14} className={`shrink-0 ${d.renk}`} />
+                          </span>
+                          <span className="truncate text-[14px] font-medium text-foreground">
+                            {a.firma}
+                          </span>
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className="block truncate text-[13px] text-muted-foreground">
+                          {a.uzmanlik}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="text-[13px] font-bold text-foreground">{a.skor}</span>
+                          <Icon name="star" size={13} className="text-gray" />
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span
+                          className="inline-flex max-w-full items-center gap-1.5 text-[13px] text-foreground"
+                          title={d.label}
+                        >
+                          <Icon name={d.ikon} size={15} className={`shrink-0 ${d.renk}`} />
+                          <span className="truncate">{d.label}</span>
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <StatusPill label="Onaya gönderilmedi" tone="gray" />
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className="block text-[12px] text-foreground">—</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <button
+                          onClick={() => {
+                            setOnayaGonderilen(a)
+                            setOnaylayanlar(makamlar.map((m) => m.id))
+                          }}
+                          title="Onaya gönder"
+                          aria-label={`${a.firma} firmasını onaya gönder`}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-white text-ink transition-colors hover:bg-surface-muted"
+                        >
+                          <Icon name="arrow-right" size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+
+                {/* Şantiyecinin önerdiği firmalar */}
+                {onerilenler.map((a) => (
+                  <tr key={a.id} className="border-b border-border last:border-0">
+                    <td className="px-3 py-2.5" />
+                    <td className="px-1 py-2.5">
+                      <span className="block truncate text-[14px] font-medium text-foreground">
+                        {a.firma}
+                      </span>
+                      <span className="block truncate text-[11px] text-muted-foreground">
+                        Şantiyeci önerisi
+                      </span>
+                    </td>
+                    <td className="px-2 py-2.5">
+                      <span className="block truncate text-[13px] text-muted-foreground">
+                        {a.iletisim}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2.5">—</td>
+                    <td className="px-2 py-2.5">
+                      <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground">
+                        <Icon name="user-plus" size={15} className="shrink-0 text-gray" />
+                        <span>Portal kaydı yok</span>
+                      </span>
+                    </td>
+                    <td className="px-2 py-2.5">
+                      <Badge tone="warning" size="sm">
+                        Önerildi
+                      </Badge>
+                    </td>
+                    <td className="px-2 py-2.5">—</td>
+                    <td className="px-3 py-2.5" />
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

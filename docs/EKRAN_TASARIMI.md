@@ -339,50 +339,55 @@ Paket detayındaki **“Belgeler”** sekmesi (Genel Bakış’tan hemen sonra) 
 
 ### 10.1 Alt Yüklenici Yönetimi
 
-**Sol panel — “Alt Yükleniciler”**
-- Hazır firma listesi **kaldırıldı**; firmalar yalnızca **arama sonucu** olarak çıkar (firma adı / uzmanlık).
-  Arama alanı: **“Firma veya uzmanlık ile ara…”**.
-- **Yaklaşık Proje İhale Bedeli** (her ihale paketine özel): yalnızca **tutar** → *Kaydet*. (Para birimi ve avans
-  oranı bu ekrandan kaldırıldı; avans oranı ihale dosyasındaki `ihAvans`, teminat oranı `ihKesinTeminatOrani`
-  alanından okunur ve onay özetine otomatik gelir.)
+**Tek panel — “Alt Yükleniciler” (sol panel yoktur)**
+
+Arama alanı, **Yaklaşık Proje İhale Bedeli** ve firma listesi **tek tablo** yapısında birleşmiştir.
+
+- **Üst şerit:** solda **arama** (“Firma veya uzmanlık ile ara…”), sağda **Yaklaşık Proje İhale Bedeli** →
+  yalnızca **tutar** → *Kaydet*. (Para birimi ve avans oranı bu ekrandan kaldırıldı; avans oranı ihale dosyasındaki
+  `ihAvans`, teminat oranı `ihKesinTeminatOrani` alanından okunur ve onay özetine otomatik gelir.)
+- **Tek tablo kolonları:** `X (listeden çıkar)` · **Firma** · **Uzmanlık** · **Skor** · **Değerlendirme** ·
+  **Onay Durumu** · **Tarih** · **davet gönder**.
+- Tablo üç tip satırı içerir:
+  1. **Paketeki firmalar** — X ile çıkarılır, firma adına tıklanınca **Firma Detayı** açılır, durum/tarih gösterilir.
+  2. **Arama sonuçları** (pakete eklenmemiş sistem firmaları) — skor + yıldız, onay durumu **“Onaya gönderilmedi”**,
+     **sağ ok** ile onaya gönderilir. Pakette zaten olan bir firma arama sonucunda tekrar görünmez.
+  3. **Şantiyecinin önerdiği firmalar** — salt okunur, **“Önerildi”** rozeti ve *Portal kaydı yok* işareti.
 - **Firma Öner** yapısı **şantiyeci tarafındadır**; bu nedenle Alt Yüklenici Yönetimi ekranından kaldırıldı ve
   **paketin Genel Bakış sekmesine** taşındı. Orada “Firma Öner” kartı üzerinden: firma ünvanı · mail adresi ·
   yetkili kişi · **SAP Sorumlusu** (SAP’de karşılayacak yetkili) · **Mail Başlığı · Cc** · **Vergi Levhası** ve
   **Firma Bilgileri Formu** dosyaları · **Notlar** (varsayılan metin: *“Firmanın incelenip kabul görmesi durumunda
   SAP kaydının yapılmasını talep ediyoruz.”*). Gönderimde ek dosyalar notla birlikte iletilir; kayıt **“Önerildi”**
-  rozetiyle hem Genel Bakış’ta hem Alt Yüklenici listesinde görünür.
-- Arama sonuç satırı: firma adı + unvan/uzmanlık · **ön değerlendirme işareti** · **Skor** · **Favori (yıldız)** ·
-  **sağ ok**.
+  rozetiyle hem Genel Bakış’ta hem Alt Yüklenici tablosunda görünür.
+
+**İki durum ekseni**
+- *Ön değerlendirme (finansal)* → işaret + etiket: **Başarılı (mavi ✓)** · **Başarısız (kırmızı ✕)** ·
+  **Tamamlanmadı (sarı !)** · **Portal kaydı yok (gri)**. Puan başarılı/başarısız firmalarda gösterilir.
+- *Onay durumu (ihale yöneticileri / direktör)* → rozet: **Onaya gönderilmedi** · **Onay bekleniyor** ·
+  **Onaylandı** · **Davet edildi** · **Reddedildi**.
 
 **Onaya gönderim akışı**
-1. Sağ ok → **“Onaya Gönder”** pop-up’ı. **Onay makamları her zaman**: proje kartındaki **Koordinatör · Direktör ·
-   Proje Müdürü** + pakete atanmış **ihale ekibi** (otomatik seçili gelir).
+1. Satırdaki **sağ ok** → **“Onaya Gönder”** pop-up’ı. **Onay makamları her zaman**: proje kartındaki **Koordinatör ·
+   Direktör · Proje Müdürü** + pakete atanmış **ihale ekibi** (otomatik seçili gelir).
 2. **“Onaya Giden Veriler”** özeti mail/bildirimin notlarında görünür: Yaklaşık İhale Bedeli (tutar + para birimi) ·
    Avans Oranı · Kesin Teminat Oranı (ihale dosyasından) · Sözleşme Türü · İhale Şekli · Sözleşme Ekleri (adet) ·
    İhale Belgeleri (adet) · Keşif (poz adedi) · Sorumlu.
 3. **Mail Başlığı · Cc** + kullanıcı notu.
-4. Gönder → firma **sağdaki “Davet Edilecek Firmalar” listesine** düşer ve **“Onay bekleniyor”** durumunu alır
-   (tarih sütununda **Gönderilme** tarihi yazılır). Onay tamamlandığında **“Onaylandı”** olur ve **davet gönderme**
-   butonu açılır; davet gönderilince **“Davet edildi”** olur.
+4. Gönder → firma aynı tabloda **“Onay bekleniyor”** durumuna geçer (tarih sütununda **Gönderilme** tarihi).
+   Onay tamamlandığında **“Onaylandı”** olur ve **davet gönderme** butonu açılır; davet gönderilince
+   **“Davet edildi”** olur.
 
-**Sağ panel — “Davet Edilecek Firmalar”**
-- **“Onay Bekleyenler” ayrı grubu kaldırıldı**; tüm firmalar tek tabloda, durumlarıyla birlikte görünür.
-- Tablo kolonları: **çarpı (listeden çıkar)** · **Firma** (tıklanınca **Firma Detayı** penceresi) ·
-  **Değerlendirme** · **Onay Durumu** · **Tarih** · **davet gönder**.
-- **İki ayrı durum ekseni:**
-  - *Ön değerlendirme (finansal)* → işaret + etiket: **Başarılı (mavi ✓)** · **Başarısız (kırmızı ✕)** ·
-    **Tamamlanmadı (sarı !)** · **Portal kaydı yok (gri)**. Puan başarılı/başarısız firmalarda gösterilir.
-  - *Onay durumu (ihale yöneticileri / direktör)* → rozet: **Onaya gönderilmedi** · **Onay bekleniyor** ·
-    **Onaylandı** · **Davet edildi** · **Reddedildi**.
-- **Tarih sütunu** tek hizada toplanır; duruma göre **Gönderilme / Onaylanma / Davet tarihi** yazılır.
-- **Uzmanlık ve skor** sağ panelde gösterilmez; sol paneldeki arama sonucunda kalır.
-- **Firma Detayı** penceresi: firma · uzmanlık · iletişim · **ön değerlendirme (durum + puan)** · **onay durumu** ·
-  skor · yetki belgesi · vergi levhası · **onaya gönderilme / onaylanma / davet tarihleri** · **onay makamları**
-  (salt okunur) · not. Onay bekleyen firmada **“Onayı Tamamla”**, onaylanan firmada **“Davet Gönder”** aksiyonu.
-- Üstte **“Davet Et”** (toplu gönderim — yalnızca **onaylanmış** firmalar); satırda **davet ikonu** = tekil davet
-  (onaylanmadan aktif olmaz).
-- **Davet maili**: alıcılar · **Mail Başlığı** · **Cc** · gövde · **Davet Ekleri** (sözleşme ekleri varsayılan
-  seçili + ihale belgeleri).
+**Firma Detayı penceresi** (firma adına tıklanınca): firma · uzmanlık · iletişim · **ön değerlendirme (durum + puan)** ·
+**onay durumu** · skor · yetki belgesi · vergi levhası · **onaya gönderilme / onaylanma / davet tarihleri** ·
+**onay makamları** (salt okunur) · not. Onay bekleyen firmada **“Onayı Tamamla”**, onaylanan firmada
+**“Davet Gönder”** aksiyonu.
+
+**Tarih sütunu** tek hizada toplanır; duruma göre **Gönderilme / Onaylanma / Davet tarihi** yazılır.
+Üstteki **“Davet Et”** butonu toplu gönderim yapar (yalnızca **onaylanmış** firmalar); satırdaki davet ikonu tekil
+davet gönderir (onaylanmadan aktif olmaz).
+
+**Davet maili**: alıcılar · **Mail Başlığı** · **Cc** · gövde · **Davet Ekleri** (sözleşme ekleri varsayılan
+seçili + ihale belgeleri).
 
 ### 10.2 Paket durumları (B)
 

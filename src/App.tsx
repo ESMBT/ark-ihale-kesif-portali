@@ -20,6 +20,8 @@ import { SantiyeciProjectListPage } from './features/santiyeci/SantiyeciProjectL
 import { SantiyeciProjectDetailPage } from './features/santiyeci/SantiyeciProjectDetailPage'
 import { SantiyeciPackageDetailPage } from './features/santiyeci/SantiyeciPackageDetailPage'
 
+import { EkipYonetimiPage } from './features/ekip/EkipYonetimiPage'
+
 /**
  * Eski adresler → modül adresleri (parametreler korunur).
  * React Router `<Navigate to>` parametre interpolasyonu yapmadığı için elle kurulur.
@@ -54,6 +56,7 @@ export default function App() {
         <Route path="/modul/ihale/projeler/talep" element={<ProjectCodeRequestPage />} />
         <Route path="/modul/ihale/projeler/:id" element={<ProjectDetailPage />} />
         <Route path="/modul/ihale/projeler/:id/paket/:paketId" element={<PackageDetailPage />} />
+        <Route path="/modul/ihale/ekip-yonetimi" element={<EkipYonetimiPage />} />
         <Route path="/modul/ihale/kesif" element={<KesifBosSayfa />} />
 
         {/* ============ ŞANTİYECİ YÖNETİMİ MODÜLÜ ============ */}

@@ -81,6 +81,11 @@ export function modulNav(modul: ModuleId): NavGroup[] {
       children: [{ label: 'Tüm Projeler', to: modulYolu(modul, '/projeler') }],
     },
     {
+      label: 'Ekip Yönetimi',
+      to: modulYolu(modul, '/ekip-yonetimi'),
+      icon: 'users',
+    },
+    {
       label: 'Keşif',
       to: modulYolu(modul, '/kesif'),
       icon: 'layers',

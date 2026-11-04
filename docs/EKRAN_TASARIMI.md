@@ -342,7 +342,7 @@ modülün kendi route alanı, menüsü ve **veri kapsamı** devreye girer.
 
 | | **İhale Yönetimi** (`/modul/ihale`) | **Şantiyeci Yönetimi** (`/modul/santiyeci`) |
 |---|---|---|
-| Menü | Tüm Projeler · Keşif · Bildirimler · Hesap Ayarları | **Projelerim** · **Proje Kodu Talebi** · Keşif · Bildirimler · Hesap Ayarları |
+| Menü | Tüm Projeler · **Ekip Yönetimi** · Keşif · Bildirimler · Hesap Ayarları | **Projelerim** · **Proje Kodu Talebi** · Keşif · Bildirimler · Hesap Ayarları |
 | Proje kapsamı | İhale ekibi kapsamı (karışık — sonraki aşamada ayrılacak) | **Yalnızca şantiyecinin projeleri** (sahibi / atandığı) |
 | Proje listesi | Tüm Projeler | **Projelerim** + **Arşivlenenler** bölümü |
 | Proje Kodu Talebi | **Görünmez** | **Var** |
@@ -355,6 +355,10 @@ modülün kendi route alanı, menüsü ve **veri kapsamı** devreye girer.
 
 **Kural:** Şantiyeci paketi **yayınladığında** paket ihale ekibine düşer ve artık silinemez; ihale ekibi
 ihaleyi iptal eder. Şantiyeci tarafında ayrı bir durum değişikliği gerekmez.
+
+**Ekip Yönetimi (ihale modülü)** — `/modul/ihale/ekip-yonetimi`: başlık + 4 sekme (içerikleri sonraki
+aşamada tasarlanacak): `İhale Paketi Kontrol` · `İhale Ataması ve Yönetimi` · `Yönetici Onayı ve Kararlar` ·
+`İhale Takip ve Kontrol`.
 
 **Nihai hedef (not):** Modül seçimi role göre otomatik olacak — kullanıcının tek erişimi olan modül varsa
 modül seçim ekranı hiç gösterilmez, doğrudan o modüle girilir. Şimdilik seçim ekranı her zaman görünür

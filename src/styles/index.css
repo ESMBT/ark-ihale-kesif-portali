@@ -1,0 +1,158 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@theme inline {
+  /* Marka / aksiyon */
+  --color-primary: var(--ark-primary);
+  --color-primary-hover: var(--ark-primary-hover);
+  --color-primary-fg: var(--ark-primary-fg);
+
+  /* Yüzey */
+  --color-bg: var(--ark-bg);
+  --color-surface: var(--ark-surface);
+  --color-surface-muted: var(--ark-surface-muted);
+  --color-surface-soft: var(--ark-surface-soft);
+  --color-surface-inverse: var(--ark-black);
+
+  /* Çizgi */
+  --color-border: var(--ark-border);
+  --color-border-strong: var(--ark-border-strong);
+  --color-line: var(--ark-line);
+  --color-line-faint: var(--ark-line-faint);
+
+  /* Metin */
+  --color-foreground: var(--ark-text);
+  --color-ink: var(--ark-ink);
+  --color-gray: var(--ark-text-subtle);
+  --color-muted-foreground: var(--ark-text-muted);
+  --color-subtle-foreground: var(--ark-text-subtle);
+
+  /* Durum */
+  --color-success: var(--ark-success-d);
+  --color-success-strong: var(--ark-success);
+  --color-success-soft: var(--ark-success-soft);
+  --color-warning: var(--ark-warning-d);
+  --color-warning-strong: var(--ark-warning);
+  --color-warning-soft: var(--ark-warning-soft);
+  --color-danger: var(--ark-danger-d);
+  --color-danger-strong: var(--ark-danger);
+  --color-danger-soft: var(--ark-danger-soft);
+  --color-info: var(--ark-ink);
+  --color-info-soft: var(--ark-info-soft);
+  --color-info-soft-2: var(--ark-info-soft-2);
+  --color-info-bg: var(--ark-info-bg);
+  --color-neutral: var(--ark-ink);
+  --color-neutral-soft: var(--ark-surface-muted);
+
+  /* Tipografi */
+  --font-sans: var(--ark-font-body);
+  --font-heading: var(--ark-font-heading);
+  --font-mono: var(--ark-font-mono);
+
+  /* Köşe */
+  --radius-sm: var(--ark-radius-sm);
+  --radius-md: var(--ark-radius-md);
+  --radius-lg: var(--ark-radius-lg);
+  --radius-xl: var(--ark-radius-xl);
+
+  /* Gölge */
+  --shadow-sm: var(--ark-shadow-sm);
+  --shadow-md: var(--ark-shadow-md);
+  --shadow-lg: var(--ark-shadow-lg);
+
+  /* Ölçü */
+  --spacing-topbar: var(--ark-topbar-height);
+  --spacing-sidebar: var(--ark-sidebar-width);
+}
+
+@layer base {
+  * {
+    border-color: var(--ark-border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--ark-bg);
+    color: var(--ark-text);
+    font-family: var(--ark-font-body);
+    font-size: var(--ark-body3-size);
+    line-height: var(--ark-body3-lh);
+  }
+
+  h1, h2, h3, h4, h5 {
+    margin: 0;
+    font-family: var(--ark-font-heading);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  h1 { font-size: var(--ark-h1-size); line-height: var(--ark-h1-lh); }
+  h2 { font-size: var(--ark-h2-size); line-height: var(--ark-h2-lh); }
+  h3 { font-size: var(--ark-h3-size); line-height: var(--ark-h3-lh); }
+  h4 { font-size: var(--ark-h4-size); line-height: var(--ark-h4-lh); }
+  h5 { font-size: var(--ark-body2-size); line-height: var(--ark-body2-lh); }
+
+  p { margin: 0; }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--ark-line);
+    border-radius: var(--ark-radius-full);
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+@layer utilities {
+  .text-body1 { font-size: var(--ark-body1-size); line-height: var(--ark-body1-lh); }
+  .text-body2 { font-size: var(--ark-body2-size); line-height: var(--ark-body2-lh); }
+  .text-body3 { font-size: var(--ark-body3-size); line-height: var(--ark-body3-lh); }
+  .text-field2 { font-size: var(--ark-field2-size); line-height: var(--ark-field2-lh); }
+
+  .card {
+    background: var(--ark-surface);
+    border: 1px solid var(--ark-border);
+    border-radius: var(--ark-radius-xl);
+    box-shadow: var(--ark-shadow-sm);
+  }
+
+  /* Yapışkan proje ray'ı — üstte topbar yüksekliği */
+  .project-rail {
+    position: sticky;
+    top: var(--ark-topbar-height);
+    height: calc(100vh - var(--ark-topbar-height));
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}

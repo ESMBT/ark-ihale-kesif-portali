@@ -1,0 +1,113 @@
+/* ==========================================================================
+   ARK İHALE & KEŞİF PORTALI — TASARIM TOKENLARI
+   --------------------------------------------------------------------------
+   Kaynak: Figma "Design System" (kmsebzYktpGg2phjeHeTno)
+   Tipografi  : Helvetica + Space Grotesk
+   Renkler    : Renkler panosundaki nötr / başarı / uyarı / tehlike / mavi serileri
+   ========================================================================== */
+
+:root {
+  /* --- Tipografi ------------------------------------------------------- */
+  --ark-font-heading: "Space Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --ark-font-body: "Helvetica Neue", Helvetica, Arial, "Segoe UI", system-ui, sans-serif;
+  --ark-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Başlıklar — Bold */
+  --ark-h1-size: 64px;   --ark-h1-lh: 76px;
+  --ark-h2-size: 36px;   --ark-h2-lh: 44px;
+  --ark-h3-size: 28px;   --ark-h3-lh: 36px;
+  --ark-h4-size: 20px;   --ark-h4-lh: 28px;
+
+  /* Gövde — Regular */
+  --ark-body1-size: 18px; --ark-body1-lh: 28px;
+  --ark-body2-size: 16px; --ark-body2-lh: 24px;
+  --ark-body3-size: 14px; --ark-body3-lh: 20px;
+
+  /* Alan (Field) */
+  --ark-field1-size: 16px; --ark-field1-lh: 24px;
+  --ark-field2-size: 12px; --ark-field2-lh: 16px;
+
+  /* --- Nötrler ---------------------------------------------------------- */
+  --ark-black: #000000;
+  --ark-ink: #2c2c2c;
+  --ark-gray: #999999;
+  --ark-line: #d2d2d2;
+  --ark-line-soft: #d9d9d9;
+  --ark-line-faint: #dfe1e2;
+  --ark-surface-soft: #f6f7f7;
+  --ark-surface-muted: #f5f5f5;
+  --ark-surface-blue: #f5f7fa;
+  --ark-white: #ffffff;
+
+  /* --- Başarı (Success) -------------------------------------------------- */
+  --ark-success-d: #1b5e43;
+  --ark-success: #009262;
+  --ark-success-m: #4bb748;
+  --ark-success-soft: #f1fbf8;
+
+  /* --- Uyarı (Warning) -------------------------------------------------- */
+  --ark-warning-d: #e48900;
+  --ark-warning: #ffb240;
+  --ark-warning-soft: #fff8ec;
+
+  /* --- Tehlike (Danger) -------------------------------------------------- */
+  --ark-danger-d: #ab0202;
+  --ark-danger: #ee4548;
+  --ark-danger-soft: #fff1f0;
+
+  /* --- Bilgi / Mavi ----------------------------------------------------- */
+  --ark-info-soft: #dbedff;
+  --ark-info-soft-2: #cbdeff;
+  --ark-info-bg: #eef5fc;
+
+  /* --- Uygulama semantiği ----------------------------------------------- */
+  --ark-primary: var(--ark-black);
+  --ark-primary-hover: #2c2c2c;
+  --ark-primary-fg: #ffffff;
+
+  --ark-bg: var(--ark-surface-blue);
+  --ark-surface: var(--ark-white);
+  --ark-surface-muted: var(--ark-surface-soft);
+  --ark-border: var(--ark-line-faint);
+  --ark-border-strong: var(--ark-line);
+
+  --ark-text: var(--ark-black);
+  --ark-text-muted: #6b6b6b;
+  --ark-text-subtle: var(--ark-gray);
+
+  --ark-sidebar-bg: var(--ark-black);
+  --ark-sidebar-fg: #ffffff;
+  --ark-sidebar-item: #1a1a1a;
+  --ark-sidebar-hover: #242424;
+
+  /* --- Boşluk ----------------------------------------------------------- */
+  --ark-space-1: 4px;
+  --ark-space-2: 8px;
+  --ark-space-3: 12px;
+  --ark-space-4: 16px;
+  --ark-space-5: 20px;
+  --ark-space-6: 24px;
+  --ark-space-8: 32px;
+  --ark-space-10: 40px;
+  --ark-space-12: 48px;
+  --ark-space-16: 64px;
+
+  /* --- Köşe / Gölge ---------------------------------------------------- */
+  --ark-radius-sm: 4px;
+  --ark-radius-md: 8px;   /* buton & input */
+  --ark-radius-lg: 12px;
+  --ark-radius-xl: 16px;  /* kart & sidebar */
+  --ark-radius-full: 9999px;
+
+  --ark-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+  --ark-shadow-md: 0 2px 10px rgb(0 0 0 / 0.08);
+  --ark-shadow-lg: 0 16px 40px rgb(0 0 0 / 0.14);
+
+  /* --- Uygulama kabuğu -------------------------------------------------- */
+  --ark-topbar-height: 64px;
+  --ark-sidebar-width: 272px;
+
+  /* --- Proje detay ray (daraltılabilir sol şerit) ----------------------- */
+  --ark-rail-width: 232px;
+  --ark-rail-width-collapsed: 56px;
+}

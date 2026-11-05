@@ -140,7 +140,7 @@ export function SantiyeciPackageDetailPage() {
       )}
 
       {sekme === 'kesif' && (
-        <TakeoffTable paket={paket} onKaydet={(satirlar, ekSutunlar) => keşifGuncelle(proje.id, paket.id, satirlar, ekSutunlar)} />
+        <TakeoffTable paket={paket} onKaydet={(satirlar, ekSutunlar, formuller) => keşifGuncelle(proje.id, paket.id, satirlar, ekSutunlar, formuller)} />
       )}
 
       {sekme === 'belgeler' && (

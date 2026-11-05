@@ -211,6 +211,8 @@ export type IhalePaketi = {
   keşif: KesifSatiri[]
   /** Keşif tablosuna eklenen özel sütunlar (Nakliye, Fittings …) */
   kesifSutunlari?: KesifEkSutun[]
+  /** Sütun formülleri (tek yerden): sütun anahtarı (birimFiyat | toplam) → `[Sütun Adı]` başvurulu formül gövdesi */
+  kesifSutunFormulleri?: Record<string, string>
   belgeler: ProjeBelge[]
   altYukleniciler: AltYuklenici[]
   /** İhale paketi oluşturulurken doldurulan alanlar (alan id → değer) */

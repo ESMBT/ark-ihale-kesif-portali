@@ -341,6 +341,20 @@ Ek bulgular: Poz No'su boş ama birimi / miktarı olan satır artık yorum sayı
 sorununun diğer yüzü). Dışa aktarma artık tablonun kendi yapısında (Level / Poz Kodu / özel sütunlar) yazar ve sihirbazla geri içe aktarılabilir;
 birim fiyat ve toplam değer olarak yazılır (Excel formülü değil). Sürekli açık: serbest formül girişi (D6), poz kodu alfabetik/numerik stil seçeneği.
 
+### Bağlam (sağ tık) menüsü ve sütun formülleri (06.11, akşam)
+
+- **ui-kit `Spreadsheet`:** genel bağlam menüsü. Hücre, satır başlığı ve sütun başlığında sağ tık; yerleşik "Yukarıya / Aşağıya satır ekle" ve
+  "Satır sil" (`onInsertRow` / `onDeleteRow`, `position: 'above' | 'below'`) + tüketici ögeleri `contextMenuItems(target)` ile eklenir
+  (`target`: `cell | row | column`). Öge yoksa tarayıcı menüsü açılır; Escape / dışarı tık kapatır; salt okunurda yerleşik ögeler gizlenir.
+- **Portal menü ögeleri:** hücre/satırda "Altına yorum satırı ekle"; sütun başlığında "Formülü düzenle…" (Birim Fiyat, Toplam Tutar),
+  "Formülü varsayılana döndür", "Sütun ekle…" (başlık sütununun sağına önceden seçili), "Sütunu kaldır" (özel sütunlar).
+- **Sütun formülü (tek yerden):** Birim Fiyat ve Toplam Tutar formülü sütun düzeyinde bir kez girilir, her poz satırına uygulanır
+  (`paket.kesifSutunFormulleri`). Başvuru `[Sütun Adı]` (A1 adresi değil — sütun eklenince harfler kayar); `+ − * /`, parantez,
+  `SUM ROUND MAX MIN ABS AVERAGE`; ondalık ayırıcı nokta. Girilen formül varsayılanı (özel sütunlardan türetilen) geçersiz kılar;
+  Birim Fiyat hücreleri o zaman düzenlenemez. Anlık doğrulama: bilinmeyen sütun, döngüsel başvuru, sözdizimi; ilk poz satırıyla örnek sonuç.
+  Kayıt, istatistik, başlık toplamları ve dışa aktarma aynı motorla hesaplar (`kesifSutunlar.ts`).
+- Açık: hesaplanan **yeni** sütun türü ("Formül" sütunu eklemek) ve hücre bazlı formül girişi yok (D6: yalnızca sütun düzeyi).
+
 ### Karar gerekenler
 
 - **D1** Poz Kodu tabloda elle eklenen satırlarda da düzenlenebilir mi? (Öneri: evet; içe aktarmadan gelen salt-okunur değil.)

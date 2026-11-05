@@ -1,4 +1,4 @@
-import type { SpreadsheetColumn } from '@ark/ui-kit'
+import { evaluateFormulaSafe, type SpreadsheetColumn } from '@ark/ui-kit'
 import type { KesifEkSutun, KesifSatiri } from '../data/types'
 import { baslikMi, levelDegeri } from './kesifSatir'
 
@@ -59,7 +59,7 @@ export function maliyetBolgesi(tumEk: KesifEkSutun[]): string[] {
 }
 
 /** Tüm sütun listesi (Detay sayfası) */
-export function kesifSutunlari(ek: KesifEkSutun[] = []): SpreadsheetColumn[] {
+export function kesifSutunlari(ek: KesifEkSutun[] = [], ozel: KesifSutunFormulleri = {}): SpreadsheetColumn[] {
   const tanim = new Map<string, SpreadsheetColumn>(SABIT_MALIYET.map((c) => [c.key as string, c]))
   const metinSutunlari: SpreadsheetColumn[] = ek
     .filter((e) => e.tur === 'metin')
@@ -87,7 +87,9 @@ export function kesifSutunlari(ek: KesifEkSutun[] = []): SpreadsheetColumn[] {
       width: 128,
       align: 'right',
       format: 'number',
-      formulaHint: birimFiyatAciklamasi(ek),
+      // Sütun formülü girildiyse hücreler hesaplanır (düzenlenemez); aksi halde elle birim fiyat girilebilir
+      readOnly: Boolean(ozel.birimFiyat) || undefined,
+      formulaHint: ozel.birimFiyat ? `= ${ozel.birimFiyat}` : birimFiyatAciklamasi(ek),
     },
     {
       key: 'toplam',
@@ -96,7 +98,7 @@ export function kesifSutunlari(ek: KesifEkSutun[] = []): SpreadsheetColumn[] {
       align: 'right',
       format: 'number',
       readOnly: true,
-      formulaHint: 'Miktar × Birim Fiyat',
+      formulaHint: ozel.toplam ? `= ${ozel.toplam}` : 'Miktar × Birim Fiyat',
     },
   ]
 }
@@ -249,10 +251,20 @@ export type DisaAktarimIstegi = {
 }
 
 /** Keşif satırlarını dışa aktarım isteğine çevirir (Poz Kodu, özel sütunlar, başlık toplamları, yorum satırları) */
-export function disaAktarimIstegi(satirlar: KesifSatiri[], ek: KesifEkSutun[], baslik: string): DisaAktarimIstegi {
+export function disaAktarimIstegi(
+  satirlar: KesifSatiri[],
+  ek: KesifEkSutun[],
+  baslik: string,
+  ozel: KesifSutunFormulleri = {},
+): DisaAktarimIstegi {
   const birimFiyatiOf = (s: KesifSatiri): number | undefined => {
-    const maliyetVar = s.malzeme != null || s.iscilik != null || s.ggk != null || Object.keys(s.ekDegerler ?? {}).length > 0
-    return maliyetVar ? birimFiyatHesapla(s, ek) : s.birimFiyat
+    const maliyetVar =
+      Boolean(ozel.birimFiyat) ||
+      s.malzeme != null ||
+      s.iscilik != null ||
+      s.ggk != null ||
+      Object.keys(s.ekDegerler ?? {}).length > 0
+    return maliyetVar ? kalemBirimFiyati(s, ek, ozel) : s.birimFiyat
   }
   const sirali = [
     ...ek.filter((e) => e.tur === 'metin'),
@@ -270,7 +282,7 @@ export function disaAktarimIstegi(satirlar: KesifSatiri[], ek: KesifEkSutun[], b
     rows: satirlar.map((s, i) => {
       if (s.yorum) return { comment: true, description: s.pozTanimi }
       if (baslikMi(s)) {
-        const toplam = altKalemler(satirlar, i).reduce((acc, k) => acc + (k.miktar || 0) * (birimFiyatiOf(k) ?? 0), 0)
+        const toplam = altKalemler(satirlar, i).reduce((acc, k) => acc + kalemToplami(k, ek, ozel), 0)
         return {
           level: levelDegeri(s),
           code: s.kaynakKodu,
@@ -291,7 +303,7 @@ export function disaAktarimIstegi(satirlar: KesifSatiri[], ek: KesifEkSutun[], b
         labor: s.iscilik,
         ggk: s.ggk,
         unitPrice: bf,
-        total: bf != null ? (s.miktar || 0) * bf : undefined,
+        total: bf != null ? kalemToplami(s, ek, ozel) : undefined,
         extras: s.ekDegerler,
       }
     }),
@@ -338,4 +350,178 @@ export function disaAktarimTablosu(istek: DisaAktarimIstegi): Array<Array<string
         ],
   )
   return [baslik, ...satirlar]
+}
+
+/* ------------------------------------------------------------------ *
+ * Sütun formülleri (tek yerden)
+ *
+ * Hesaplanan sütunların (Birim Fiyat, Toplam Tutar) formülü sütun düzeyinde bir kez girilir ve her poz satırına
+ * uygulanır. Formülde başka sütunlara `[Sütun Adı]` ile başvurulur (A1 adresi değil: sütun eklenince harfler kayar);
+ * `+ - * /`, parantez ve SUM, ROUND, MAX, MIN, ABS, AVERAGE kullanılabilir. Ondalık ayırıcı nokta (1.1).
+ * ------------------------------------------------------------------ */
+
+/** Sütun anahtarı → formül gövdesi (`=` olmadan) */
+export type KesifSutunFormulleri = Record<string, string>
+
+/** Formülü değiştirilebilen sütunlar */
+export const FORMULLU_SUTUNLAR = ['birimFiyat', 'toplam'] as const
+
+export type FormulluSutun = (typeof FORMULLU_SUTUNLAR)[number]
+
+const ad = (x: string) => x.trim().toLocaleLowerCase('tr')
+
+/** `[Sütun Adı]` başvurularını bu satırın hücre adreslerine çevirir; bilinmeyen sütunda hata döner */
+export function formulCevir(
+  formul: string,
+  sutunlar: SpreadsheetColumn[],
+  harf: (key: string) => string,
+  excelRow: number,
+): { formul: string; hata?: string } {
+  const bilinmeyen: string[] = []
+  const cevrilen = formul.replace(/\[([^\]]+)\]/g, (_, baslik: string) => {
+    const sutun = sutunlar.find((c) => typeof c.title === 'string' && ad(c.title) === ad(baslik))
+    if (!sutun) {
+      bilinmeyen.push(baslik)
+      return '0'
+    }
+    return `${harf(sutun.key)}${excelRow}`
+  })
+  return bilinmeyen.length > 0 ? { formul: cevrilen, hata: `Bilinmeyen sütun: [${bilinmeyen.join('], [')}]` } : { formul: cevrilen }
+}
+
+/** Varsayılan Birim Fiyat formülü `[Sütun Adı]` biçiminde (özel sütunlardan türetilir) */
+export function varsayilanBirimFiyatFormulu(ek: KesifEkSutun[]): string {
+  const t = terimler(ek)
+  const baslik = (k: string) => `[${ek.find((e) => e.key === k)?.baslik ?? { malzeme: 'Malzeme', iscilik: 'İşçilik', ggk: 'GGK' }[k] ?? k}]`
+  const toplam = t.terimler.map((x) => [baslik(x.key), ...x.carpanlar.map(baslik)].join('*')).join('+')
+  if (!toplam) return '0'
+  return t.toplamCarpanlari.length > 0 ? `(${toplam})*${t.toplamCarpanlari.map(baslik).join('*')}` : toplam
+}
+
+export const VARSAYILAN_TOPLAM_FORMULU = '[Miktar]*[Birim Fiyat]'
+
+/** Bir sütunun geçerli formülü: girilmişse o, yoksa varsayılanı */
+export function etkinFormul(key: FormulluSutun, ek: KesifEkSutun[], ozel: KesifSutunFormulleri = {}): string {
+  return ozel[key] ?? (key === 'birimFiyat' ? varsayilanBirimFiyatFormulu(ek) : VARSAYILAN_TOPLAM_FORMULU)
+}
+
+type SatirDegeri = (key: string) => number | string
+
+function degerlerOf(satir: KesifSatiri, ek: KesifEkSutun[]): SatirDegeri {
+  return (key) => {
+    switch (key) {
+      case 'miktar':
+        return satir.miktar ?? 0
+      case 'malzeme':
+        return satir.malzeme ?? 0
+      case 'iscilik':
+        return satir.iscilik ?? 0
+      case 'ggk':
+        return satir.ggk ?? 0
+      case 'pozKodu':
+        return satir.kaynakKodu ?? ''
+      case 'birimFiyat':
+        return satir.birimFiyat ?? birimFiyatHesapla(satir, ek)
+      default: {
+        const e = ek.find((x) => x.key === key)
+        if (!e) return 0
+        if (e.tur === 'metin') return String(satir.ekDegerler?.[key] ?? '')
+        return ekDeger(satir, e)
+      }
+    }
+  }
+}
+
+/**
+ * Bir hesaplanan sütunun değerini satır için hesaplar (motorla; tablodaki hücre formülüyle aynı sonuç).
+ * `degerler`: örnek/gerçek satır değerleri. Hata (bilinmeyen sütun, döngü, sözdizimi) → `{ hata }`.
+ */
+function formulHesapla(
+  key: FormulluSutun,
+  ek: KesifEkSutun[],
+  ozel: KesifSutunFormulleri,
+  degerler: SatirDegeri,
+): { deger?: number; hata?: string } {
+  const sutunlar = kesifSutunlari(ek, ozel)
+  const harf = sutunHarfleri(sutunlar)
+  const hesaplananlar = new Map<string, string>()
+  for (const k of FORMULLU_SUTUNLAR) {
+    const c = formulCevir(etkinFormul(k, ek, ozel), sutunlar, harf, 2)
+    if (c.hata && k === key) return { hata: c.hata }
+    hesaplananlar.set(k, c.formul)
+  }
+  const resolver = {
+    getSheet: (name: string) => (name === 'S' ? { name } : undefined),
+    getCell: (_sheet: string, row: number, col: number) => {
+      if (row !== 2) return undefined
+      const sutun = sutunlar[col - 1]
+      if (!sutun) return undefined
+      const hesap = hesaplananlar.get(sutun.key)
+      // Toplam Tutar her zaman, Birim Fiyat yalnızca sütun formülü girilmişse formül hücresi gibi çözülür;
+      // diğer sütunlar (ve formülsüz Birim Fiyat) verilen satır değeridir
+      if (hesap !== undefined && (sutun.key === 'toplam' || (sutun.key === 'birimFiyat' && ozel.birimFiyat))) {
+        return { raw: `=${hesap}` }
+      }
+      const v = degerler(sutun.key)
+      return { raw: typeof v === 'number' ? v : String(v) }
+    },
+  }
+  const sonuc = evaluateFormulaSafe(hesaplananlar.get(key) ?? '0', {
+    sheetName: 'S',
+    resolver,
+    cache: new Map(),
+    visiting: new Set(),
+  })
+  if (sonuc.error) return { hata: sonuc.error === '#CIRC!' ? 'Döngüsel başvuru (formül kendine dolaylı olarak başvuruyor)' : `Formül hesaplanamadı (${sonuc.error})` }
+  return typeof sonuc.value === 'number' && Number.isFinite(sonuc.value)
+    ? { deger: sonuc.value }
+    : { hata: 'Formül bir sayı üretmiyor' }
+}
+
+/**
+ * Formülü örnek değerlerle (her sayısal sütun 2) deneyip hata mesajı döndürür; geçerliyse `null`.
+ * Kullanıcı formül girerken anlık doğrulama içindir.
+ */
+export function formulDogrula(key: FormulluSutun, formul: string, ek: KesifEkSutun[], ozel: KesifSutunFormulleri): string | null {
+  if (!formul.trim()) return 'Formül boş olamaz.'
+  if (!/^[\s\d.,+\-*/()\[\]A-Za-zÇĞİÖŞÜçğıöşü_%]+$/.test(formul)) return 'Formülde geçersiz karakter var.'
+  const sonuc = formulHesapla(key, ek, { ...ozel, [key]: formul.trim() }, () => 2)
+  return sonuc.hata ?? null
+}
+
+/** Satırın Birim Fiyat'ı: sütun formülü varsa onunla, yoksa özel sütun yapısına göre */
+export function birimFiyatSatiri(satir: KesifSatiri, ek: KesifEkSutun[], ozel: KesifSutunFormulleri = {}): number {
+  if (ozel.birimFiyat) return formulHesapla('birimFiyat', ek, ozel, degerlerOf(satir, ek)).deger ?? 0
+  return birimFiyatHesapla(satir, ek)
+}
+
+/** Kalem satırının geçerli Birim Fiyat'ı: sütun formülü > elle girilen > özel sütun yapısından hesaplanan */
+export function kalemBirimFiyati(satir: KesifSatiri, ek: KesifEkSutun[], ozel: KesifSutunFormulleri = {}): number {
+  return ozel.birimFiyat ? birimFiyatSatiri(satir, ek, ozel) : (satir.birimFiyat ?? birimFiyatHesapla(satir, ek))
+}
+
+/** Kalem satırının geçerli Toplam Tutarı (sütun formülleri dikkate alınır) */
+export function kalemToplami(satir: KesifSatiri, ek: KesifEkSutun[], ozel: KesifSutunFormulleri = {}): number {
+  return toplamSatiri(satir, ek, ozel, kalemBirimFiyati(satir, ek, ozel))
+}
+
+/** Satırın Toplam Tutarı: sütun formülü varsa onunla, yoksa Miktar × Birim Fiyat */
+export function toplamSatiri(satir: KesifSatiri, ek: KesifEkSutun[], ozel: KesifSutunFormulleri = {}, birimFiyati?: number): number {
+  const bf = birimFiyati ?? birimFiyatSatiri(satir, ek, ozel)
+  if (ozel.toplam) {
+    // Toplam formülü Birim Fiyat'a başvurabilir: değeri doğrudan sağlayarak hesapla
+    return formulHesapla('toplam', ek, ozel, (k) => (k === 'birimFiyat' ? bf : degerlerOf(satir, ek)(k))).deger ?? 0
+  }
+  return (satir.miktar || 0) * bf
+}
+
+/** Formülü gerçek bir satırla dener (Sütun formülü penceresindeki örnek sonuç) */
+export function formulOrnegi(
+  key: FormulluSutun,
+  formul: string,
+  ek: KesifEkSutun[],
+  ozel: KesifSutunFormulleri,
+  satir: KesifSatiri,
+): { deger?: number; hata?: string } {
+  return formulHesapla(key, ek, { ...ozel, [key]: formul.trim() }, degerlerOf(satir, ek))
 }

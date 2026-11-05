@@ -22,10 +22,13 @@ const SABIT_AD: Record<string, string> = { malzeme: 'Malzeme', iscilik: 'İşçi
  */
 export function EkSutunModal({
   ekSutunlar,
+  baslangicSonra,
   onUygula,
   onVazgec,
 }: {
   ekSutunlar: KesifEkSutun[]
+  /** Bağlam menüsünden açıldığında yeni sütunun yerleştirileceği sütun (sağına) */
+  baslangicSonra?: string
   onUygula: (yeni: KesifEkSutun[]) => void
   onVazgec: () => void
 }) {
@@ -33,7 +36,9 @@ export function EkSutunModal({
   const [baslik, setBaslik] = useState('')
   const [tur, setTur] = useState<KesifEkSutun['tur']>('maliyet')
   const bolge = maliyetBolgesi(liste)
-  const [sonra, setSonra] = useState<string>(bolge[bolge.length - 1] ?? 'ggk')
+  const [sonra, setSonra] = useState<string>(
+    baslangicSonra && bolge.includes(baslangicSonra) ? baslangicSonra : (bolge[bolge.length - 1] ?? 'ggk'),
+  )
 
   const ad = (k: string) => liste.find((e) => e.key === k)?.baslik ?? SABIT_AD[k] ?? k
   const temizBaslik = baslik.trim()

@@ -5,6 +5,8 @@ import {
   type SpreadsheetCellValue,
   type SpreadsheetChange,
   type SpreadsheetColumn,
+  type SpreadsheetContextTarget,
+  type SpreadsheetMenuItem,
   type SpreadsheetRow,
   type SpreadsheetRowCommand,
   type SpreadsheetSheet,
@@ -35,21 +37,30 @@ import {
 } from '../../lib/kesifSatir'
 import {
   birimFiyatFormulu,
-  birimFiyatHesapla,
   ekDeger,
   ekSutunlariBirlestir,
+  formulCevir,
+  kalemBirimFiyati,
+  FORMULLU_SUTUNLAR,
+  kalemToplami,
   kesifSutunlari,
+  maliyetBolgesi,
   sutunHarfleri,
+  type FormulluSutun,
+  type KesifSutunFormulleri,
 } from '../../lib/kesifSutunlar'
 import { DogrulamaSeridi } from './DogrulamaSeridi'
 import { DuzeltOnizlemeModal } from './DuzeltOnizlemeModal'
 import { EkSutunModal } from './EkSutunModal'
+import { SutunFormulModal } from './SutunFormulModal'
 import { ImportWizard } from './ImportWizard'
 
 /** Tablo etiketleri (ui-kit varsayılanları aksansızdır) */
 const SPREADSHEET_ETIKETLERI = {
   print: 'Yazdır',
   insertRow: 'Satır ekle',
+  insertRowAbove: 'Yukarıya satır ekle',
+  insertRowBelow: 'Aşağıya satır ekle',
   deleteRow: 'Satır sil',
   reset: 'Sıfırla',
   resetTitle: 'Tabloyu sıfırla?',
@@ -144,6 +155,7 @@ function kesifSheetsOlustur(
   goster: string,
   ek: KesifEkSutun[] = [],
   birimler: string[] = [],
+  ozel: KesifSutunFormulleri = {},
 ): SpreadsheetSheet[] {
   const gorunen =
     goster === 'Sadece ana gruplar'
@@ -153,7 +165,7 @@ function kesifSheetsOlustur(
         : satirlar
 
   // Sütun düzeni dinamik (özel sütunlar): formüller sütun harflerine değil anahtarlara göre kurulur
-  const sutunlar = kesifSutunlari(ek).map((c) =>
+  const sutunlar = kesifSutunlari(ek, ozel).map((c) =>
     c.key === 'birim' && birimler.length > 0 ? { ...c, options: birimler } : c,
   )
   const harf = sutunHarfleri(sutunlar)
@@ -197,10 +209,7 @@ function kesifSheetsOlustur(
       const altKalemler = satirlar
         .slice(tamIdx + 1, altAgacSonu(satirlar, tamIdx) + 1)
         .filter((k) => !k.yorum && !baslikMi(k))
-      const statikTutar = altKalemler.reduce((acc, k) => {
-        const bf = k.birimFiyat ?? birimFiyatHesapla(k, ek)
-        return acc + (k.miktar || 0) * bf
-      }, 0)
+      const statikTutar = altKalemler.reduce((acc, k) => acc + kalemToplami(k, ek, ozel), 0)
       const formullu = araliklar.length > 0
 
       ozetBasliklari.push({
@@ -234,7 +243,8 @@ function kesifSheetsOlustur(
       s.malzeme == null &&
       s.iscilik == null &&
       s.ggk == null &&
-      Object.keys(s.ekDegerler ?? {}).length === 0
+      Object.keys(s.ekDegerler ?? {}).length === 0 &&
+      !ozel.birimFiyat
 
     const cells: Record<string, SpreadsheetCellValue> = {
       ...bos,
@@ -247,8 +257,14 @@ function kesifSheetsOlustur(
       malzeme: s.malzeme ?? '',
       iscilik: s.iscilik ?? '',
       ggk: s.ggk ?? '',
-      birimFiyat: ayriBirimFiyatVar ? s.birimFiyat! : birimFiyatFormulu(ek, harf, excelRow),
-      toplam: `=${harf('miktar')}${excelRow}*${harf('birimFiyat')}${excelRow}`,
+      birimFiyat: ozel.birimFiyat
+        ? `=${formulCevir(ozel.birimFiyat, sutunlar, harf, excelRow).formul}`
+        : ayriBirimFiyatVar
+          ? s.birimFiyat!
+          : birimFiyatFormulu(ek, harf, excelRow),
+      toplam: ozel.toplam
+        ? `=${formulCevir(ozel.toplam, sutunlar, harf, excelRow).formul}`
+        : `=${harf('miktar')}${excelRow}*${harf('birimFiyat')}${excelRow}`,
     }
     // Katsayı sütunları her zaman dolu gösterilir (boş = 1); maliyet sütunları boş kalabilir
     for (const e of ek) {
@@ -322,7 +338,7 @@ export function TakeoffTable({
   onKaydet,
 }: {
   paket: IhalePaketi
-  onKaydet: (satirlar: KesifSatiri[], ekSutunlar?: KesifEkSutun[]) => void
+  onKaydet: (satirlar: KesifSatiri[], ekSutunlar?: KesifEkSutun[], formuller?: KesifSutunFormulleri) => void
 }) {
   const [satirlar, setSatirlar] = useState<KesifSatiri[]>(() => levelleriDoldur(paket.keşif))
   const [duzenle, setDuzenle] = useState(true)
@@ -331,8 +347,12 @@ export function TakeoffTable({
   const [versiyon, setVersiyon] = useState('#1 27.10.2026')
   const [ekSutunlar, setEkSutunlar] = useState<KesifEkSutun[]>(() => paket.kesifSutunlari ?? [])
   const [ekSutunModalAcik, setEkSutunModalAcik] = useState(false)
+  // Sütun formülleri (Birim Fiyat / Toplam Tutar) tek yerden girilir ve tüm poz satırlarına uygulanır
+  const [formuller, setFormuller] = useState<KesifSutunFormulleri>(() => paket.kesifSutunFormulleri ?? {})
+  const [formulModali, setFormulModali] = useState<FormulluSutun | null>(null)
+  const [ekSutunBaslangic, setEkSutunBaslangic] = useState<string | undefined>(undefined)
   const [sheets, setSheets] = useState<SpreadsheetSheet[]>(() =>
-    kesifSheetsOlustur(levelleriDoldur(paket.keşif), 'Tümü', paket.kesifSutunlari ?? []),
+    kesifSheetsOlustur(levelleriDoldur(paket.keşif), 'Tümü', paket.kesifSutunlari ?? [], [], paket.kesifSutunFormulleri ?? {}),
   )
   const [kaydedildiBilgisi, setKaydedildiBilgisi] = useState(false)
   const [sihirbazAcik, setSihirbazAcik] = useState(false)
@@ -342,23 +362,27 @@ export function TakeoffTable({
   // Poz No tabloda gösterilmez; kayıt ve dışa aktarımda Level'lardan ve sıradan otomatik üretilir
   const numarali = useMemo(() => levelNumaralariniUygula(satirlar), [satirlar])
   // Kayıt / dışa aktarım: özel sütun varsa Birim Fiyat (maliyet × katsayı) hesaplanıp satıra yazılır
-  const kaydedilecek = useMemo(
-    () =>
-      ekSutunlar.length === 0
-        ? numarali
-        : numarali.map((s) =>
-            s.yorum || baslikMi(s) || (s.malzeme == null && s.iscilik == null && s.ggk == null && !s.ekDegerler)
-              ? s
-              : { ...s, birimFiyat: birimFiyatHesapla(s, ekSutunlar) },
-          ),
-    [numarali, ekSutunlar],
-  )
+  const kaydedilecek = useMemo(() => {
+    const formullu = Boolean(formuller.birimFiyat)
+    if (ekSutunlar.length === 0 && !formullu) return numarali
+    return numarali.map((s) =>
+      s.yorum ||
+      baslikMi(s) ||
+      (!formullu && s.malzeme == null && s.iscilik == null && s.ggk == null && !s.ekDegerler)
+        ? s
+        : { ...s, birimFiyat: kalemBirimFiyati(s, ekSutunlar, formuller) },
+    )
+  }, [numarali, ekSutunlar, formuller])
   // Kurallar backend'de (Ark.Excel); satırlar değiştikçe debounce ile doğrulanır
   const dogrulama = useKesifDogrulama(satirlar)
   // Birim sütunu, backend'deki tanımlı birimlerden açılır liste sunar (referans yüklenince sayfalar yeniden kurulur)
   const birimSecenekleri = dogrulama.referans?.units
-  const olustur = (liste: KesifSatiri[], gosterim: string = goster, ek: KesifEkSutun[] = ekSutunlar) =>
-    kesifSheetsOlustur(liste, gosterim, ek, birimSecenekleri ?? [])
+  const olustur = (
+    liste: KesifSatiri[],
+    gosterim: string = goster,
+    ek: KesifEkSutun[] = ekSutunlar,
+    ozel: KesifSutunFormulleri = formuller,
+  ) => kesifSheetsOlustur(liste, gosterim, ek, birimSecenekleri ?? [], ozel)
   // F3: sorunlu hücrelerde işaret + ipucu
   const hucreIsaretleri = useMemo(
     () => sorunlardanHucreIsaretleri(dogrulama.sonuc?.issues ?? []),
@@ -374,7 +398,16 @@ export function TakeoffTable({
   useEffect(() => {
     setSatirlar(levelleriDoldur(paket.keşif))
     setEkSutunlar(paket.kesifSutunlari ?? [])
-    setSheets(kesifSheetsOlustur(levelleriDoldur(paket.keşif), goster, paket.kesifSutunlari ?? [], birimSecenekleri ?? []))
+    setFormuller(paket.kesifSutunFormulleri ?? {})
+    setSheets(
+      kesifSheetsOlustur(
+        levelleriDoldur(paket.keşif),
+        goster,
+        paket.kesifSutunlari ?? [],
+        birimSecenekleri ?? [],
+        paket.kesifSutunFormulleri ?? {},
+      ),
+    )
   }, [paket.id])
 
   useEffect(() => {
@@ -459,12 +492,9 @@ export function TakeoffTable({
   const istatistik = useMemo(() => {
     const gruplar = satirlar.filter(baslikMi).length
     const kalemler = satirlar.filter((s) => !s.yorum && !baslikMi(s))
-    const toplamTutar = kalemler.reduce((acc, s) => {
-      const bf = s.birimFiyat ?? birimFiyatHesapla(s, ekSutunlar)
-      return acc + (s.miktar || 0) * bf
-    }, 0)
+    const toplamTutar = kalemler.reduce((acc, s) => acc + kalemToplami(s, ekSutunlar, formuller), 0)
     return { gruplar, kalemSayisi: kalemler.length, toplamTutar }
-  }, [satirlar, ekSutunlar])
+  }, [satirlar, ekSutunlar, formuller])
 
   const handleSpreadsheetChange = (
     nextSheets: SpreadsheetSheet[],
@@ -608,10 +638,12 @@ export function TakeoffTable({
   const handleInsertRow = (cmd: SpreadsheetRowCommand) => {
     setSatirlar((prev) => {
       const hedefIdx = cmd.rowId ? prev.findIndex((s) => s.id === cmd.rowId) : -1
+      const uste = cmd.position === 'above' && hedefIdx !== -1
       const yeniSatir: KesifSatiri = {
         id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         seviye: 2,
-        level: varsayilanLevel(prev, hedefIdx),
+        // Üste eklenen satır hedef satırla aynı seviyede (kardeş) olur; alta eklenen başlığın altına girer
+        level: uste ? levelDegeri(prev[hedefIdx]) : varsayilanLevel(prev, hedefIdx),
         pozNo: '',
         pozTanimi: 'Yeni İmalat Kalemi',
         birim: 'm²',
@@ -621,6 +653,8 @@ export function TakeoffTable({
       const klon = [...prev]
       if (hedefIdx === -1) {
         klon.push(yeniSatir)
+      } else if (uste) {
+        klon.splice(hedefIdx, 0, yeniSatir)
       } else {
         // Yeni poz, seçili satırın yorum/devam satırlarından sonra gelir (devamları bölmez)
         klon.splice(yorumlarinSonu(prev, hedefIdx) + 1, 0, yeniSatir)
@@ -631,7 +665,7 @@ export function TakeoffTable({
   }
 
   /** Seçili satırın (ve mevcut devam satırlarının) altına yorum / devam satırı (Level "C") ekler */
-  const handleYorumEkle = () => {
+  const handleYorumEkle = (rowId?: string) => {
     const yeni: KesifSatiri = {
       id: `not-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       seviye: 2,
@@ -647,7 +681,8 @@ export function TakeoffTable({
     if (gosterim !== goster) setGoster(gosterim)
 
     setSatirlar((prev) => {
-      const hedefIdx = seciliSatirId ? prev.findIndex((s) => s.id === seciliSatirId) : -1
+      const hedefId = rowId ?? seciliSatirId
+      const hedefIdx = hedefId ? prev.findIndex((s) => s.id === hedefId) : -1
       const klon = [...prev]
       if (hedefIdx === -1) klon.push(yeni)
       else klon.splice(yorumlarinSonu(prev, hedefIdx) + 1, 0, yeni)
@@ -692,6 +727,60 @@ export function TakeoffTable({
     setEkSutunModalAcik(false)
   }
 
+  const formulUygula = (sutun: FormulluSutun, formul: string | null) => {
+    const yeni = { ...formuller }
+    if (formul) yeni[sutun] = formul
+    else delete yeni[sutun]
+    setFormuller(yeni)
+    setSheets(olustur(satirlar, goster, ekSutunlar, yeni))
+    setKaydedildiBilgisi(false)
+    setFormulModali(null)
+  }
+
+  /** Sağ tık menüsü: hücre / satır başlığı / sütun başlığı; yerleşik satır ekle-sil ögelerine eklenir */
+  const baglamMenusu = (hedef: SpreadsheetContextTarget): SpreadsheetMenuItem[] => {
+    if (!duzenle || hedef.sheetId !== 'kesif') return []
+    const ogeler: SpreadsheetMenuItem[] = []
+    if (hedef.kind !== 'column') {
+      ogeler.push({ id: 'yorum-ekle', label: 'Altına yorum satırı ekle', onSelect: () => handleYorumEkle(hedef.rowId) })
+    }
+    if (hedef.kind === 'row') return ogeler
+
+    const key = hedef.columnKey
+    const ek = ekSutunlar.find((e) => e.key === key)
+    const baslik = kesifSutunlari(ekSutunlar, formuller).find((c) => c.key === key)?.title
+    if ((FORMULLU_SUTUNLAR as readonly string[]).includes(key)) {
+      const f = key as FormulluSutun
+      ogeler.push({
+        id: 'formul-duzenle',
+        label: 'Formülü düzenle…',
+        separatorBefore: ogeler.length > 0,
+        onSelect: () => setFormulModali(f),
+      })
+      if (formuller[f]) {
+        ogeler.push({ id: 'formul-sifirla', label: 'Formülü varsayılana döndür', onSelect: () => formulUygula(f, null) })
+      }
+    }
+    ogeler.push({
+      id: 'sutun-ekle',
+      label: 'Sütun ekle…',
+      separatorBefore: ogeler.length > 0,
+      onSelect: () => {
+        setEkSutunBaslangic(maliyetBolgesi(ekSutunlar).includes(key) ? key : undefined)
+        setEkSutunModalAcik(true)
+      },
+    })
+    if (ek) {
+      ogeler.push({
+        id: 'sutun-kaldir',
+        label: `“${typeof baslik === 'string' ? baslik : ek.baslik}” sütununu kaldır`,
+        danger: true,
+        onSelect: () => ekSutunlariUygula(ekSutunlar.filter((e) => e.key !== key)),
+      })
+    }
+    return ogeler
+  }
+
   const handleReset = () => {
     setSatirlar(levelleriDoldur(paket.keşif))
     setSheets(olustur(levelleriDoldur(paket.keşif), goster))
@@ -714,7 +803,7 @@ export function TakeoffTable({
     setEkSutunlar(birlesik)
     setSatirlar(yeniListe)
     setSheets(olustur(yeniListe, goster, birlesik))
-    onKaydet(levelNumaralariniUygula(yeniListe), birlesik)
+    onKaydet(levelNumaralariniUygula(yeniListe), birlesik, formuller)
     setKaydedildiBilgisi(true)
     setSihirbazAcik(false)
     setDuzenle(true)
@@ -764,7 +853,7 @@ export function TakeoffTable({
               <Button
                 variant="secondary"
                 icon="download"
-                onClick={() => void kesifDisaAktar(kaydedilecek, paket.ad, ekSutunlar)}
+                onClick={() => void kesifDisaAktar(kaydedilecek, paket.ad, ekSutunlar, formuller)}
               >
                 Dışa Aktar
               </Button>
@@ -786,7 +875,7 @@ export function TakeoffTable({
                 variant="brand"
                 icon="check"
                 onClick={() => {
-                  onKaydet(kaydedilecek, ekSutunlar)
+                  onKaydet(kaydedilecek, ekSutunlar, formuller)
                   setKaydedildiBilgisi(true)
                 }}
               >
@@ -843,12 +932,21 @@ export function TakeoffTable({
             cellMarks={hucreIsaretleri}
             onSelectionChange={(a) => setSeciliSatirId(a && a.sheetId === 'kesif' ? a.rowId : null)}
             labels={SPREADSHEET_ETIKETLERI}
+            contextMenuItems={baglamMenusu}
             toolbar={
               <>
-                <KitButton variant="ghost" size="sm" disabled={!duzenle} onClick={handleYorumEkle}>
+                <KitButton variant="ghost" size="sm" disabled={!duzenle} onClick={() => handleYorumEkle()}>
                   Yorum satırı ekle
                 </KitButton>
-                <KitButton variant="ghost" size="sm" disabled={!duzenle} onClick={() => setEkSutunModalAcik(true)}>
+                <KitButton
+                  variant="ghost"
+                  size="sm"
+                  disabled={!duzenle}
+                  onClick={() => {
+                    setEkSutunBaslangic(undefined)
+                    setEkSutunModalAcik(true)
+                  }}
+                >
                   Sütun ekle
                 </KitButton>
               </>
@@ -890,7 +988,7 @@ export function TakeoffTable({
                       size="sm"
                       icon="check"
                       onClick={() => {
-                        onKaydet(kaydedilecek, ekSutunlar)
+                        onKaydet(kaydedilecek, ekSutunlar, formuller)
                         setKaydedildiBilgisi(true)
                       }}
                       title="Değişiklikleri kaydet"
@@ -930,7 +1028,23 @@ export function TakeoffTable({
       )}
 
       {ekSutunModalAcik && (
-        <EkSutunModal ekSutunlar={ekSutunlar} onUygula={ekSutunlariUygula} onVazgec={() => setEkSutunModalAcik(false)} />
+        <EkSutunModal
+          ekSutunlar={ekSutunlar}
+          baslangicSonra={ekSutunBaslangic}
+          onUygula={ekSutunlariUygula}
+          onVazgec={() => setEkSutunModalAcik(false)}
+        />
+      )}
+
+      {formulModali && (
+        <SutunFormulModal
+          sutun={formulModali}
+          ekSutunlar={ekSutunlar}
+          formuller={formuller}
+          ornekSatir={satirlar.find((s) => !s.yorum && !baslikMi(s))}
+          onUygula={(f) => formulUygula(formulModali, f)}
+          onVazgec={() => setFormulModali(null)}
+        />
       )}
 
       {/* Excel içe aktarma sihirbazı */}

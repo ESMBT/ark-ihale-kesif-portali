@@ -696,10 +696,15 @@ async function kesifDosyasiYerelOku(file: File): Promise<ImportSonucu> {
 }
 
 /** Keşif tablosunu Ark.Excel SurveyExcelExporter ile Excel'e aktarır */
-export async function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string, ekSutunlar: KesifEkSutun[] = []) {
+export async function kesifDisaAktar(
+  satirlar: KesifSatiri[],
+  projeKodu: string,
+  ekSutunlar: KesifEkSutun[] = [],
+  formuller: Record<string, string> = {},
+) {
   const safeCode = (projeKodu || 'proje').replace(/[^a-zA-Z0-9_-]/g, '_')
   // Portaldaki yapıyla (Level, Poz Kodu, özel sütunlar) yazılır; dosya sihirbazla geri içe aktarılabilir
-  const istek = disaAktarimIstegi(satirlar, ekSutunlar, projeKodu)
+  const istek = disaAktarimIstegi(satirlar, ekSutunlar, projeKodu, formuller)
   try {
     const res = await fetch(`${EXCEL_API_BASE}/export-table`, {
       method: 'POST',

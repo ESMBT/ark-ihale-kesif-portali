@@ -84,6 +84,19 @@ export function DogrulamaSeridi({
     </Button>
   )
 
+  /* Boş keşif: "geçti" demek yanıltıcı olur */
+  if (satirlar.length === 0) {
+    return (
+      <div
+        className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface-soft px-4 py-2.5 text-[13px] text-muted-foreground"
+        role="status"
+      >
+        <Icon name="file-spreadsheet" size={16} />
+        <span>Keşif boş. Başlık ve poz ekleyin ya da Excel’den içe aktarın; kurallar satırlar eklendikçe denetlenir.</span>
+      </div>
+    )
+  }
+
   /* Henüz sonuç yok */
   if (!sonuc) {
     return (

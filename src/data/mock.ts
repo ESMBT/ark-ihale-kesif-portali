@@ -656,7 +656,8 @@ export const sapProjeler: SapProje[] = [
       düzeninde: ana gruplar + indirilmiş kalemler)
    ================================================================== */
 
-const ornekKesif: KesifSatiri[] = [
+/** Geliştirme/demoda elle yüklenebilen örnek keşif; paketler artık boş keşifle başlar */
+export const ornekKesif: KesifSatiri[] = [
   { id: 'k1', seviye: 1, pozNo: '01', pozTanimi: 'KABA YAPI İŞLERİ', birim: '', miktar: 0, teklifKirilimi: 'Malzeme + İşçilik' },
   { id: 'k2', seviye: 2, pozNo: '01.02', pozTanimi: '2 CM MERMER ZEMİN KAPLAMASI', birim: 'm²', miktar: 472, teklifKirilimi: 'Malzeme + İşçilik' },
   { id: 'k3', seviye: 2, pozNo: '01.03', pozTanimi: 'ZEMİN GEÇİŞ PROFİLİ MONTAJI', birim: 'm', miktar: 1522, teklifKirilimi: 'İşçilik' },
@@ -813,7 +814,7 @@ export const projeler: Proje[] = [
         sorumluId: 'p5',
         yayinDurumu: 'yayinda',
         seciliFirma: 'Demir Yapı İnşaat San. ve Tic. Ltd. Şti.',
-        keşif: ornekKesif,
+        keşif: [],
         belgeler: [
           { id: 'b1', ad: 'BFT_Cankaya_Kongre_Merkezi.pdf', tur: 'BFT', boyut: '4,2 MB', yuklendigiTarihi: '21.10.2026', zorunlu: false, turTipi: 'bft', klasor: 'bft-1' },
           { id: 'b11', ad: 'BFT_Keşif_Listesi.xlsx', tur: 'BFT', boyut: '860 KB', yuklendigiTarihi: '21.10.2026', zorunlu: false, turTipi: 'bft', klasor: 'bft-1' },
@@ -921,7 +922,7 @@ export const projeler: Proje[] = [
           ihAvans: '10',
         },
         seciliFirma: 'Anadolu Elektrik Ltd. Şti.',
-        keşif: ornekKesif.slice(10),
+        keşif: [],
         belgeler: [],
         altYukleniciler: [
           { id: 'a3', firma: 'Anadolu Elektrik Ltd. Şti.', uzmanlik: 'Elektrik', skor: 88, yetkiBelgesi: 'Alındı', vergiLevhasi: 'Alındı', iletisim: 'info@anadoluelektrik.com.tr', durum: 'onaya-gonderilmedi', degerlendirme: 'basarili', degerlendirmePuani: 71 },
@@ -942,7 +943,7 @@ export const projeler: Proje[] = [
           ihIsinAdi: 'Çankaya Kongre Merkezi Kaba Yapı İşleri',
           ihIhaleSekli: 'Götürü',
         },
-        keşif: ornekKesif.slice(0, 5),
+        keşif: [],
         belgeler: [],
         altYukleniciler: [],
       },
@@ -999,7 +1000,7 @@ export const projeler: Proje[] = [
         ad: 'HVAC İşleri',
         durum: 'taslak',
         isTipi: 'Götürü',
-        keşif: ornekKesif.slice(10),
+        keşif: [],
         belgeler: [
           { id: 'b4', ad: 'BFT_Bornova_Lojistik.pdf', tur: 'BFT', boyut: '6,1 MB', zorunlu: false, turTipi: 'bft', klasor: 'bft-1' },
           { id: 'b61', ad: 'BFT_Bornova_Mekatronik.pdf', tur: 'BFT', boyut: '4,4 MB', zorunlu: false, turTipi: 'bft', klasor: 'bft-1' },
@@ -1015,7 +1016,7 @@ export const projeler: Proje[] = [
         ad: 'Elektrik İşleri',
         durum: 'taslak',
         isTipi: 'Birim Fiyatlı',
-        keşif: ornekKesif.slice(0, 8),
+        keşif: [],
         belgeler: [],
         altYukleniciler: [],
       },
@@ -1066,7 +1067,7 @@ export const projeler: Proje[] = [
         ad: 'Elektrik İşleri',
         durum: 'taslak',
         isTipi: 'Birim Fiyatlı',
-        keşif: ornekKesif.slice(0, 5),
+        keşif: [],
         belgeler: [],
         altYukleniciler: [],
         notlar: 'Keşif poz tanımlarının 3 satırda eksik olduğu bildirildi.',
@@ -1107,7 +1108,7 @@ export const projeler: Proje[] = [
         durum: 'sozlesme-imzalandi',
         isTipi: 'Götürü',
         seciliFirma: 'Anadolu Elektrik Ltd. Şti.',
-        keşif: ornekKesif,
+        keşif: [],
         belgeler: [
           { id: 'b5', ad: 'BFT_Muratpasa.pdf', tur: 'BFT', boyut: '3,3 MB', yuklendigiTarihi: '10.09.2026', zorunlu: false, turTipi: 'bft', klasor: 'bft-1' },
           { id: 'b71', ad: 'Mimari_Plan_1_200.pdf', tur: 'Çizim', boyut: '14,2 MB', yuklendigiTarihi: '10.09.2026', zorunlu: false, turTipi: 'cizim', klasor: 'cizim' },

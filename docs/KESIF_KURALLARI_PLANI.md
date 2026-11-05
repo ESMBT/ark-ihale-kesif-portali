@@ -355,6 +355,18 @@ birim fiyat ve toplam değer olarak yazılır (Excel formülü değil). Sürekli
   Kayıt, istatistik, başlık toplamları ve dışa aktarma aynı motorla hesaplar (`kesifSutunlar.ts`).
 - Açık: hesaplanan **yeni** sütun türü ("Formül" sütunu eklemek) ve hücre bazlı formül girişi yok (D6: yalnızca sütun düzeyi).
 
+### Boş başlangıç ve sıfırdan keşif hazırlama (06.11, akşam)
+
+- **Boş gelir:** paketlerin örnek keşfi kaldırıldı (`mock.ts`: `keşif: []`; örnek veri `ornekKesif` olarak dışa açık, elle yüklenebilir).
+  Boş keşifte tablonun üstünde yönlendirme paneli: **Başlık ekle / Poz ekle / Excel'den içe aktar / Şablonu indir** + Level açıklaması.
+  Doğrulama şeridi "geçti" yerine "Keşif boş" der; **yayın kapısı kapalıdır** ("Keşif boş · Hazırla").
+- **Satır türü içerikten türer** (içe aktarma ile aynı kural): **Birim ya da Miktar doluysa poz, ikisi de boşsa başlık.** Level yalnızca
+  hiyerarşiyi belirler (1 üst başlık, 2 alt başlık, 3 poz… 1–9; `C` = yorum). Birim + Miktar boşaltılırsa poz başlığa döner
+  (fiyatlar temizlenir); başlığa Birim ya da sıfırdan farklı Miktar yazılırsa poz olur. Level değişince alt satırlar birlikte taşınır.
+- **Ekleme:** araç çubuğu ve sağ tık menüsünde *Başlık ekle* (seçili başlıkla aynı seviye, alt ağacından sonra; poz seçiliyse bir üst seviye),
+  *Alt başlık ekle* (seçili başlığın altına), satır ekle = poz (başlığın altında Level+1), *Yorum satırı ekle*.
+- Açık: boş keşifte yayın kapısı yalnızca arayüzde; sunucu tarafı durum makinesiyle gelecek (§6).
+
 ### Karar gerekenler
 
 - **D1** Poz Kodu tabloda elle eklenen satırlarda da düzenlenebilir mi? (Öneri: evet; içe aktarmadan gelen salt-okunur değil.)

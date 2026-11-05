@@ -548,10 +548,16 @@ export function TakeoffTable({
         durum.yapiDegisti = true // geçersiz Level: hücre eski değerine döndürülür
       }
 
+      // Satır türü içerikten türer (içe aktarma ile aynı kural): Birim ya da Miktar doluysa poz, ikisi de boşsa başlık.
+      // Level yalnızca hiyerarşiyi belirler; türü Birim/Miktar belirler.
+      const birimHam = String(hucreHamDeger(r.cells.birim)).trim()
+      const miktarHam = hucreHamDeger(r.cells.miktar)
+      const miktarBos = String(miktarHam).trim() === ''
+      const miktarSayi = sayiCozumle(miktarHam)
+
       if (s.seviye === 1) {
-        // Başlığa birim yazılırsa satır poz olur
-        const birimHam = String(hucreHamDeger(r.cells.birim)).trim()
-        if (birimHam) {
+        // Başlığa birim (ya da sıfırdan farklı miktar) yazılırsa satır poz olur
+        if (birimHam || (miktarSayi !== undefined && miktarSayi !== 0)) {
           durum.yapiDegisti = true
           return {
             ...s,
@@ -561,7 +567,7 @@ export function TakeoffTable({
             markaModel: markaModel || undefined,
             kaynakKodu,
             birim: birimHam,
-            miktar: 0,
+            miktar: miktarSayi ?? 0,
           }
         }
         return {
@@ -573,8 +579,28 @@ export function TakeoffTable({
         }
       }
 
-      const birim = String(hucreHamDeger(r.cells.birim)).trim()
-      const miktar = sayiCozumle(hucreHamDeger(r.cells.miktar)) ?? s.miktar
+      // Birim ve Miktar ikisi de boşaltılırsa poz başlığa dönüşür (fiyat alanları temizlenir)
+      if (!birimHam && (miktarBos || miktarSayi === 0)) {
+        durum.yapiDegisti = true
+        return {
+          ...s,
+          seviye: 1,
+          level,
+          pozTanimi: pozTanimi || s.pozTanimi,
+          markaModel: markaModel || undefined,
+          kaynakKodu,
+          birim: '',
+          miktar: 0,
+          malzeme: undefined,
+          iscilik: undefined,
+          ggk: undefined,
+          birimFiyat: undefined,
+          ekDegerler: undefined,
+        }
+      }
+
+      const birim = birimHam
+      const miktar = miktarBos ? 0 : (miktarSayi ?? s.miktar)
       const malzeme = sayiCozumle(hucreHamDeger(r.cells.malzeme))
       const iscilik = sayiCozumle(hucreHamDeger(r.cells.iscilik))
       const ggk = sayiCozumle(hucreHamDeger(r.cells.ggk))
@@ -628,9 +654,10 @@ export function TakeoffTable({
 
   /** Yeni satırın Level'ı: başlığın altına eklenirse bir derin, pozun altına eklenirse aynı seviye */
   const varsayilanLevel = (liste: KesifSatiri[], hedefIdx: number) => {
-    let i = hedefIdx
+    // Hedef yoksa (satır sona eklenir) son satıra göre; liste boşsa ilk poz Level 1 olur
+    let i = hedefIdx === -1 ? liste.length - 1 : hedefIdx
     while (i >= 0 && liste[i].yorum) i -= 1
-    if (i < 0) return 2
+    if (i < 0) return 1
     const hedef = liste[i]
     return baslikMi(hedef) ? Math.min(LEVEL_MAX, levelDegeri(hedef) + 1) : levelDegeri(hedef)
   }
@@ -727,6 +754,57 @@ export function TakeoffTable({
     setEkSutunModalAcik(false)
   }
 
+  /**
+   * Yeni başlık satırı ekler. `ayni`: seçili başlıkla aynı seviyede, onun alt ağacından sonra (seçili poz ise bir üst seviyede);
+   * `alt`: seçili başlığın altına bir seviye derin. Seçim yoksa Level 1 olarak sona eklenir.
+   */
+  const handleBaslikEkle = (tur: 'ayni' | 'alt', rowId?: string) => {
+    // Başlığın görünmesi için "Sadece kalemler" filtresi kaldırılır
+    const gosterim = goster === 'Sadece kalemler' ? 'Tümü' : goster
+    if (gosterim !== goster) setGoster(gosterim)
+    const yeniId = `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+
+    setSatirlar((prev) => {
+      const hedefId = rowId ?? seciliSatirId
+      let idx = hedefId ? prev.findIndex((s) => s.id === hedefId) : -1
+      while (idx > 0 && prev[idx].yorum) idx -= 1 // yorum satırı seçiliyse bağlı olduğu satıra git
+      let level = 1
+      let konum = prev.length
+      if (idx !== -1) {
+        const hedef = prev[idx]
+        const lv = levelDegeri(hedef)
+        if (baslikMi(hedef)) {
+          if (tur === 'alt') {
+            level = Math.min(LEVEL_MAX, lv + 1)
+            konum = yorumlarinSonu(prev, idx) + 1
+          } else {
+            level = lv
+            konum = altAgacSonu(prev, idx) + 1
+          }
+        } else {
+          level = Math.max(LEVEL_MIN, lv - 1)
+          konum = yorumlarinSonu(prev, idx) + 1
+        }
+      }
+      const yeni: KesifSatiri = {
+        id: yeniId,
+        seviye: 1,
+        level,
+        pozNo: '',
+        pozTanimi: 'Yeni Başlık',
+        birim: '',
+        miktar: 0,
+        teklifKirilimi: 'Malzeme + İşçilik',
+      }
+      const klon = [...prev]
+      klon.splice(konum, 0, yeni)
+      setSheets(olustur(klon, gosterim))
+      return klon
+    })
+    setKaydedildiBilgisi(false)
+    setOdak({ rowId: yeniId, columnKey: 'pozTanimi', token: Date.now() })
+  }
+
   const formulUygula = (sutun: FormulluSutun, formul: string | null) => {
     const yeni = { ...formuller }
     if (formul) yeni[sutun] = formul
@@ -742,6 +820,11 @@ export function TakeoffTable({
     if (!duzenle || hedef.sheetId !== 'kesif') return []
     const ogeler: SpreadsheetMenuItem[] = []
     if (hedef.kind !== 'column') {
+      const hedefSatir = satirlar.find((s) => s.id === hedef.rowId)
+      ogeler.push({ id: 'baslik-ekle', label: 'Başlık ekle', separatorBefore: false, onSelect: () => handleBaslikEkle('ayni', hedef.rowId) })
+      if (hedefSatir && baslikMi(hedefSatir)) {
+        ogeler.push({ id: 'alt-baslik-ekle', label: 'Alt başlık ekle', onSelect: () => handleBaslikEkle('alt', hedef.rowId) })
+      }
       ogeler.push({ id: 'yorum-ekle', label: 'Altına yorum satırı ekle', onSelect: () => handleYorumEkle(hedef.rowId) })
     }
     if (hedef.kind === 'row') return ogeler
@@ -923,6 +1006,36 @@ export function TakeoffTable({
             : 'overflow-hidden'
         }
       >
+        {satirlar.length === 0 && (
+          <div className="shrink-0 space-y-3 border-b border-line bg-surface-soft px-5 py-4" data-testid="bos-kesif">
+            <div>
+              <p className="text-[15px] font-bold text-black">Keşif henüz boş</p>
+              <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
+                Sıfırdan hazırlamak için bir başlıkla başlayın; ya da hazır bir dosyayı Excel’den içe aktarın.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="brand" icon="plus" disabled={!duzenle} onClick={() => handleBaslikEkle('ayni')}>
+                Başlık ekle
+              </Button>
+              <Button variant="secondary" icon="plus" disabled={!duzenle} onClick={() => handleInsertRow({ sheetId: 'kesif' })}>
+                Poz ekle
+              </Button>
+              <Button variant="secondary" icon="upload" disabled={!duzenle} onClick={() => setSihirbazAcik(true)}>
+                Excel’den içe aktar
+              </Button>
+              <Button variant="ghost" icon="file-spreadsheet" onClick={() => void kesifSablonuIndir()}>
+                Şablonu indir
+              </Button>
+            </div>
+            <p className="text-[12px] leading-5 text-muted-foreground">
+              <strong className="text-ink">Level</strong> hiyerarşiyi belirler: 1 üst başlık, 2 alt başlık, 3 poz… (1–9).
+              Satırın türünü <strong className="text-ink">Birim ve Miktar</strong> belirler: ikisi de boşsa başlık, doluysa poz olur.
+              Level’a <strong className="text-ink">C</strong> yazarsanız yorum (devam) satırı olur. Satıra sağ tıklayarak başlık,
+              alt başlık, poz ve yorum ekleyebilirsiniz.
+            </p>
+          </div>
+        )}
         <div className={tamEkran ? 'h-full w-full flex-1 min-h-0' : 'h-[640px] w-full'}>
           <Spreadsheet
             sheets={sheets}
@@ -935,6 +1048,12 @@ export function TakeoffTable({
             contextMenuItems={baglamMenusu}
             toolbar={
               <>
+                <KitButton variant="ghost" size="sm" disabled={!duzenle} onClick={() => handleBaslikEkle('ayni')}>
+                  Başlık ekle
+                </KitButton>
+                <KitButton variant="ghost" size="sm" disabled={!duzenle} onClick={() => handleBaslikEkle('alt')}>
+                  Alt başlık ekle
+                </KitButton>
                 <KitButton variant="ghost" size="sm" disabled={!duzenle} onClick={() => handleYorumEkle()}>
                   Yorum satırı ekle
                 </KitButton>

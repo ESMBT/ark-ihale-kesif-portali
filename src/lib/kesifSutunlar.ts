@@ -20,7 +20,7 @@ export const ONERILEN_EK_SUTUNLAR: Array<{ baslik: string; tur: KesifEkSutun['tu
 ]
 
 const SABIT_ONCESI: SpreadsheetColumn[] = [
-  { key: 'level', title: 'Level', width: 76, align: 'center' },
+  { key: 'level', title: 'Level', width: 76, align: 'center', formulaHint: '1–9 · C = yorum' },
   { key: 'pozKodu', title: 'Poz Kodu', width: 120, align: 'left' },
   { key: 'pozTanimi', title: 'Poz Tanımı', width: 340, align: 'left' },
   { key: 'markaModel', title: 'Marka / Model', width: 150, align: 'left' },

@@ -39,7 +39,10 @@ export function SantiyeciPackageDetailPage() {
   const [yayinOnizleme, setYayinOnizleme] = useState(false)
   // F5: yayın kapısı — kaydedilmiş keşif satırlarının doğrulaması (kurallar backend'de)
   const kesifDogrulama = useKesifDogrulama(paket?.keşif ?? BOS_KESIF)
-  const yayinKapisi = yayinKapisiHesapla(kesifDogrulama)
+  const yayinKapisi = yayinKapisiHesapla(
+    kesifDogrulama,
+    paket ? paket.keşif.filter((s) => !s.yorum && s.seviye !== 1).length : undefined,
+  )
 
   /* Erişim — yalnızca şantiyecinin kendi paketleri */
   const erisimVar = paket

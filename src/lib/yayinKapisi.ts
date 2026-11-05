@@ -11,13 +11,17 @@ import type { DogrulamaDurumu } from './kesifDogrulama'
  */
 export type YayinKapisi = {
   izinli: boolean
-  durum: 'hazir' | 'hata' | 'kontrol' | 'servis'
+  durum: 'hazir' | 'hata' | 'kontrol' | 'servis' | 'bos'
   hataSayisi: number
   /** Kullanıcıya gösterilecek kısa açıklama */
   mesaj: string
 }
 
-export function yayinKapisiHesapla(d: DogrulamaDurumu): YayinKapisi {
+/** `pozSayisi` verilirse ve 0 ise (boş keşif) kapı kapalıdır: önce keşif hazırlanmalı */
+export function yayinKapisiHesapla(d: DogrulamaDurumu, pozSayisi?: number): YayinKapisi {
+  if (pozSayisi === 0) {
+    return { izinli: false, durum: 'bos', hataSayisi: 0, mesaj: 'Keşif boş; yayınlamadan önce en az bir poz ekleyin.' }
+  }
   if (d.hata) {
     return {
       izinli: false,

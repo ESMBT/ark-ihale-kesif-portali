@@ -25,6 +25,16 @@ export function YayinlaDugmesi({
           {kapi.hataSayisi} keşif hatası · Düzelt
         </button>
       )}
+      {kapi.durum === 'bos' && (
+        <button
+          type="button"
+          onClick={onKesifeGit}
+          className="rounded-full border border-line bg-surface-soft px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:brightness-95"
+          title="Keşif sekmesine git ve keşfi hazırla"
+        >
+          Keşif boş · Hazırla
+        </button>
+      )}
       {kapi.durum === 'kontrol' && (
         <span className="text-[12px] text-muted-foreground" role="status">
           Keşif doğrulanıyor…

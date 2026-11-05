@@ -1,3 +1,4 @@
+import { kesifSatirSayisi } from '../../lib/kesifSatir'
 import { useState } from 'react'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -81,7 +82,7 @@ export function ContractedTakeoffPage() {
                     <span className="text-[13px] text-muted-foreground">
                       {k.sozlesmeTarihi} · {k.sozlesmeTutari} {k.paraBirimi}
                     </span>
-                    <span className="text-[12px] text-gray">{k.keşif.length} poz satırı</span>
+                    <span className="text-[12px] text-gray">{kesifSatirSayisi(k.keşif)} poz satırı</span>
                   </button>
                 </li>
               ))}
@@ -107,7 +108,7 @@ export function ContractedTakeoffPage() {
                   ['Sözleşme No', secili.sozlesmeNo],
                   ['Sözleşme Tarihi', secili.sozlesmeTarihi],
                   ['Sözleşme Tutarı', `${secili.sozlesmeTutari} ${secili.paraBirimi}`],
-                  ['Poz Sayısı', String(secili.keşif.length)],
+                  ['Poz Sayısı', String(kesifSatirSayisi(secili.keşif))],
                 ].map(([k, v]) => (
                   <div key={k}>
                     <dt className="text-[12px] text-muted-foreground">{k}</dt>
@@ -140,11 +141,13 @@ export function ContractedTakeoffPage() {
                         <td className="px-4 py-2.5 font-mono text-[13px] text-muted-foreground">{r.pozNo}</td>
                         <td
                           className={`px-4 py-2.5 ${
-                            r.seviye === 1
-                              ? 'font-bold text-black'
-                              : r.seviye === 3
-                                ? 'pl-8 text-ink'
-                                : 'text-ink'
+                            r.yorum
+                              ? 'pl-8 text-[13px] text-muted-foreground italic'
+                              : r.seviye === 1
+                                ? 'font-bold text-black'
+                                : r.seviye === 3
+                                  ? 'pl-8 text-ink'
+                                  : 'text-ink'
                           }`}
                         >
                           {r.pozTanimi}

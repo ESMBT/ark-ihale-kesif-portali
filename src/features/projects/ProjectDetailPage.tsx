@@ -1,3 +1,4 @@
+import { kesifSatirSayisi } from '../../lib/kesifSatir'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
@@ -218,7 +219,7 @@ export function ProjectDetailPage() {
                         <Alan etiket="Sorumlu" deger={sorumluAd(k.sorumluId)} />
                         <Alan etiket="Çalışma tipi" deger={k.isTipi} />
                         <Alan etiket="Doldurulan alan" deger={`${alanSayisi} alan`} />
-                        <Alan etiket="Keşif poz sayısı" deger={`${k.keşif.length} poz`} />
+                        <Alan etiket="Keşif poz sayısı" deger={`${kesifSatirSayisi(k.keşif)} poz`} />
                         <Alan etiket="Belge" deger={`${k.belgeler.length} dosya`} />
                         <Alan
                           etiket="Seçilen firma"

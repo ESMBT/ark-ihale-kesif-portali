@@ -117,6 +117,10 @@ veya kural kodu). Onayınız gerekenler işaretli.
 | 11 | Portalın kendi dışa aktarması başlıkları `Miktar = 0` ile yazıyor → geri okunurken başlıklar poz sanılıyordu | **Birimsiz ve miktarı 0 olan kodlu satır başlıktır.** Birimi olan sıfır miktarlı satır kalem kalır (E04) | ☐ |
 | 12 | `Maktüen`, `Ad` gibi birim yazımları | `Maktüen`/`maktu` → `götürü`, `Ad` → `adet` düzeltme önerisiyle gelir (E02) | ☐ |
 | 13 | *Yeniden numarala* harfli önekli numaralarda (`V.9.2`) çalışmıyordu | Yalnızca **sırası bozuk kardeş gruplarını** belge sırasına göre numaralar (atlamalar korunur); alt satırlar yeni öneki takip eder; sıfır dolgusu yalnızca dosyada varsa | ☐ |
+| 14 | **Doğru biçim = ConWize BOQ** (`Number / Description / Units / Quantity / Unit cost / Total cost`, 4 seviye: `01` → `01.02` → `01.02.30` → `01.02.30.0010`). Girdideki numara önemsiz | İçe aktarmada **otomatik numaralandırma** (sihirbazda varsayılan açık): başlıklar `01`, `01.01`…; pozlar bağlı olduğu başlığın altında `01.01.0010`, `0020`… Girdi numaraları yalnızca hiyerarşiyi anlamak için okunur; **özgün kod "Kaynak Kod" sütununda korunur** (`AHU 01`, `V.1.`). Poz, dosyadaki sırayla en son görülen başlığın altına girer | ☐ |
+| 15 | `V` gibi en üst satır dosyada yok (SAP: `V.1.`, `V.2.` …) | Eksik üst başlık **`01` kök satırı** olur; açıklaması keşfin başlığından (disiplin → belge → proje → sayfa adı) gelir ve sihirbazda düzenlenebilir. Bu, E05 (`V` eksik) sorununu da ortadan kaldırır | ☐ |
+| 16 | Numarası olmayan satırlar (çok satırlı açıklamalar, notlar) tabloda görünmüyordu | **Yorum / devam satırı** (`KesifSatiri.yorum`): kaynak konumunda, önceki satırın devamı olarak ayrı satır (soluk + italik). Poz sayılmaz, numaralanmaz, doğrulanmaz, toplamlara girmez. Tabloda **"Yorum satırı ekle"** ile eklenir; poz silinince devam satırları da silinir; dışa aktarımda not olarak yazılır | ☐ |
+| 17 | Otomatik numaralanmış bölümde hem pozlar (`01.07.0010`) hem alt başlıklar (`01.07.01`) var → E06 yanlış pozitifi | **Kardeş sıralaması türüne göre ayrı** (başlık / poz); *Yeniden numarala* da aynı grupları kullanır | ☐ |
 | 9 | Başlık seviyeleri portalda "ana grup"a düzleşiyor | Açık: iç içe başlık hiyerarşisi (ve iç içe aç/kapa) istenecek mi? | ☐ |
 
 ---
@@ -140,6 +144,10 @@ Akış: **Dosya → Aralık → Sütun Eşleme → Önizleme.** Ayrıştırma Ar
 
 ### Sıradaki
 
+- [x] **Otomatik numaralandırma + kök satır + yorum/devam satırları** (§3 #14–#16): backend `SurveyAutoNumbering`,
+  `autoNumber` / `rootTitle` sorguları, `SourceCode`/`IsGenerated`; arayüzde sihirbaz seçenekleri, tabloda `note` satır türü
+  (ui-kit), "Kaynak Kod" sütunu, "Yorum satırı ekle".
+- Desteklenmeyen: ConWize'ın **`Matrix BOQ`** sayfası (bina başına miktar sütunları); yalnızca `BOQ` sayfası okunur.
 - [ ] Eşlemeyi sonraki içe aktarma için hatırlama (başlık imzasına göre).
 - [ ] Başlık satırı değişince eşlemenin yeniden önerilmesi (backend'e `suggest` çağrısı).
 - [ ] Backend kapalıyken yerel yedek (şimdilik yok; sihirbaz hata gösterir).

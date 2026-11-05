@@ -1,3 +1,4 @@
+import { kesifSatirSayisi } from '../../lib/kesifSatir'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -150,7 +151,7 @@ export function InviteCompaniesTab({
     const kesinTeminat = paket.alanlar?.ihKesinTeminatOrani
     const sozlesmeEkleri = sozlesmeBelgeleri.length
     const belgeler = paket.belgeler.length
-    const pozSayisi = paket.keşif.length
+    const pozSayisi = kesifSatirSayisi(paket.keşif)
     const sozlesmeTuru = sozlesmeTurleri.find((t) => t.id === paket.sozlesmeTuru)?.ad ?? '—'
 
     return [

@@ -244,6 +244,13 @@ export type KesifSatiri = {
   birimFiyat?: number
   markaModel?: string
   not?: string
+  /**
+   * Yorum / devam satırı: numarası olmayan açıklama metni (çok satırlı poz açıklamasının devamı,
+   * kapsam notu…). Metin `pozTanimi`'ndadır; poz sayılmaz, numaralanmaz, doğrulanmaz, toplamlara girmez.
+   */
+  yorum?: boolean
+  /** İçe aktarmada otomatik numaralandırılmadan önceki özgün kod (ör. "AHU 01", "V.1.") */
+  kaynakKodu?: string
 }
 
 export type ProjeBelge = {

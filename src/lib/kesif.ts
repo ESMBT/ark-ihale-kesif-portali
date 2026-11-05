@@ -20,9 +20,11 @@ export const KESIF_ZORUNLU_SUTUNLAR = ['Poz Tanımı', 'Birim', 'Miktar', 'Tekli
 export const TEKLIF_KIRILIMLARI = ['Malzeme', 'İşçilik', 'GGK', 'Nakliye', 'Malzeme + İşçilik'] as const
 
 export type SurveyNoteDto = {
-  row: number
-  code: string
   text: string
+  kind?: string
+  /** Notun Excel'deki 1 tabanlı satırı */
+  sourceRow: number
+  position?: string
 }
 
 export type SurveyWarningDto = {
@@ -63,6 +65,8 @@ export type SurveyItemDto = {
   totalTl?: number | null
   heading?: string | null
   notes: SurveyNoteDto[]
+  /** Dosyadaki özgün kod (otomatik numaralandırmada Code yeniden yazılırsa) */
+  sourceCode?: string | null
 }
 
 export type SurveySectionDto = {
@@ -74,6 +78,9 @@ export type SurveySectionDto = {
   heading?: string | null
   notes: SurveyNoteDto[]
   items: SurveyItemDto[]
+  sourceCode?: string | null
+  /** Dosyada satırı olmayan, otomatik numaralandırmada üretilen bölüm (ör. kök "01") */
+  isGenerated?: boolean
 }
 
 export type SurveyDocumentDto = {
@@ -116,30 +123,59 @@ export type KaynakliKesifSatiri = {
   kaynakSatir: number
 }
 
-/** surveyDocumentToKesifSatirlari ile aynı dönüşüm; her satırın Excel kaynak satırını da döndürür */
+/**
+ * surveyDocumentToKesifSatirlari ile aynı dönüşüm; her satırın Excel kaynak satırını da döndürür.
+ *
+ * Numarası olmayan metin satırları (çok satırlı açıklamalar, kapsam/başlık notları) kaybolmaz: kaynak
+ * dosyadaki konumlarına göre **yorum satırı** (`yorum: true`) olarak, bağlı oldukları satırın önüne/arkasına
+ * eklenir; tabloda önceki satırın devamı gibi görünürler.
+ */
 export function surveyDocumentToKaynakliSatirlar(doc: SurveyDocumentDto): KaynakliKesifSatiri[] {
   const satirlar: KaynakliKesifSatiri[] = []
   const ts = Date.now()
+  let yorumSayaci = 0
+
+  const yorum = (metin: string, kaynakSatir: number): KaynakliKesifSatiri => ({
+    kaynakSatir,
+    satir: {
+      id: `not-${kaynakSatir || 0}-${ts}-${yorumSayaci++}`,
+      seviye: 2,
+      yorum: true,
+      pozNo: '',
+      pozTanimi: metin.trim(),
+      birim: '',
+      miktar: 0,
+      teklifKirilimi: 'Malzeme + İşçilik',
+    },
+  })
+  const notlar = (liste?: SurveyNoteDto[]) =>
+    [...(liste ?? [])].filter((n) => n.text?.trim()).sort((a, b) => a.sourceRow - b.sourceRow)
+  const kaynakKodu = (kod: string | null | undefined, yeniKod: string) =>
+    kod?.trim() && kod.trim() !== yeniKod ? kod.trim() : undefined
 
   doc.sections.forEach((section, secIdx) => {
     const hasSectionHeader = Boolean(section.code?.trim() || section.title?.trim())
 
     if (hasSectionHeader) {
-      const notMetni = section.notes?.map((n) => n.text).filter(Boolean).join(' | ')
+      // Bölümü öncelyen grup başlığı (ör. "YANGIN DAMPERLERİ") bölüm satırının önünde yorum olarak görünür
+      if (section.heading?.trim()) satirlar.push(yorum(section.heading, section.sourceRow || 0))
+
+      const pozNo = section.code?.trim() || String(secIdx + 1).padStart(2, '0')
       satirlar.push({
         kaynakSatir: section.sourceRow || 0,
         satir: {
           id: `sec-${section.sourceRow || secIdx + 1}-${ts}-${secIdx}`,
           seviye: 1,
-          pozNo: section.code?.trim() || String(secIdx + 1).padStart(2, '0'),
+          pozNo,
           pozTanimi: section.title?.trim() || section.code?.trim() || 'BÖLÜM',
-          aciklama: notMetni || section.heading || undefined,
           birim: '',
           miktar: 0,
           teklifKirilimi: 'Malzeme + İşçilik',
           markaModel: section.brands?.trim() || undefined,
+          kaynakKodu: kaynakKodu(section.sourceCode, pozNo),
         },
       })
+      for (const n of notlar(section.notes)) satirlar.push(yorum(n.text, n.sourceRow))
     }
 
     section.items.forEach((item, itemIdx) => {
@@ -175,23 +211,24 @@ export function surveyDocumentToKaynakliSatirlar(doc: SurveyDocumentDto): Kaynak
         teklifKirilimi = 'GGK'
       }
 
-      const notMetni = item.notes?.map((n) => n.text).filter(Boolean).join(' | ')
+      const pozNo =
+        item.code?.trim() ||
+        `${section.code?.trim() || String(secIdx + 1).padStart(2, '0')}.${String(itemIdx + 1).padStart(2, '0')}`
+      const itemNotlari = notlar(item.notes)
+      const once = itemNotlari.filter((n) => n.sourceRow < (item.sourceRow || 0))
+      const sonra = itemNotlari.filter((n) => !once.includes(n))
 
-      const aciklama =
-        [item.additionalDescription?.trim(), notMetni].filter(Boolean).join(' | ') ||
-        item.heading ||
-        undefined
+      if (item.heading?.trim()) satirlar.push(yorum(item.heading, item.sourceRow || 0))
+      for (const n of once) satirlar.push(yorum(n.text, n.sourceRow))
 
       satirlar.push({
         kaynakSatir: item.sourceRow || 0,
         satir: {
           id: `itm-${item.sourceRow || itemIdx + 1}-${ts}-${secIdx}-${itemIdx}`,
-          seviye: section.depth > 1 ? 3 : 2,
-          pozNo:
-            item.code?.trim() ||
-            `${section.code?.trim() || String(secIdx + 1).padStart(2, '0')}.${String(itemIdx + 1).padStart(2, '0')}`,
+          seviye: 2,
+          pozNo,
           pozTanimi: item.description?.trim() || '',
-          aciklama,
+          aciklama: item.additionalDescription?.trim() || undefined,
           birim: item.unit?.trim() || '',
           miktar: item.quantity ?? 0,
           teklifKirilimi,
@@ -200,8 +237,11 @@ export function surveyDocumentToKaynakliSatirlar(doc: SurveyDocumentDto): Kaynak
           ggk,
           birimFiyat,
           markaModel: item.brands?.trim() || undefined,
+          kaynakKodu: kaynakKodu(item.sourceCode, pozNo),
         },
       })
+
+      for (const n of sonra) satirlar.push(yorum(n.text, n.sourceRow))
     })
   })
 
@@ -218,6 +258,16 @@ export function kesifSatirlariToSurveyDocument(
 
   satirlar.forEach((s, index) => {
     const rowNo = index + 5
+
+    // Yorum satırı: önceki kalemin (yoksa bölümün) devam/açıklama notu olarak yazılır
+    if (s.yorum) {
+      const not = { text: s.pozTanimi, kind: 'Specification', sourceRow: rowNo, position: 'After' }
+      const sonKalem = aktifBolum?.items[aktifBolum.items.length - 1]
+      if (sonKalem) sonKalem.notes.push(not)
+      else if (aktifBolum) aktifBolum.notes.push(not)
+      return
+    }
+
     if (s.seviye === 1) {
       aktifBolum = {
         sourceRow: rowNo,
@@ -402,6 +452,10 @@ export type SurveyImportOptions = {
   lastDataRow: number | null
   /** "1:code,2:description" biçiminde sütun eşlemesi */
   columnMap: string
+  /** Bölüm ve pozları otomatik numaralandır (01, 01.01, 01.01.0010); özgün kodlar korunur */
+  autoNumber?: boolean
+  /** Otomatik numaralandırmada üretilen kök satırın (01) açıklaması; boşsa keşif başlığı */
+  rootTitle?: string
 }
 
 /** Ark.Excel servisinden dönen, kullanıcıya gösterilebilir hata */
@@ -471,6 +525,8 @@ export function kesifEslemeIleIceAktar(
   q.set('firstDataRow', String(opts.firstDataRow))
   if (opts.lastDataRow != null) q.set('lastDataRow', String(opts.lastDataRow))
   if (opts.columnMap) q.set('columnMap', opts.columnMap)
+  if (opts.autoNumber) q.set('autoNumber', 'true')
+  if (opts.rootTitle?.trim()) q.set('rootTitle', opts.rootTitle.trim())
   return excelIstegi<SurveyDocumentDto>(`/import?${q.toString()}`, file)
 }
 
@@ -664,7 +720,10 @@ export async function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string)
     // Backend erişilemezse yerel dışa aktarıma düş
   }
 
-  const veri = satirlar.map((s) => [
+  const veri = satirlar.map((s) =>
+    s.yorum
+      ? ['', s.pozTanimi, '', '', '', '', '', '', '', '', '']
+      : [
     s.pozNo,
     s.pozTanimi,
     s.aciklama ?? '',
@@ -676,7 +735,8 @@ export async function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string)
     s.ggk ?? '',
     '',
     s.markaModel ?? '',
-  ])
+  ],
+  )
 
   const ws = XLSX.utils.aoa_to_sheet([[...KESIF_SABLON_BASLIKLARI], ...veri])
   const wb = XLSX.utils.book_new()

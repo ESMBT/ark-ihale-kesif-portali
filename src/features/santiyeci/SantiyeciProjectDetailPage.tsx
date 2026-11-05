@@ -1,3 +1,4 @@
+import { kesifSatirSayisi } from '../../lib/kesifSatir'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
@@ -198,7 +199,7 @@ export function SantiyeciProjectDetailPage() {
                         <td className="px-5 py-4">
                           <span className="block font-bold text-black">{k.ad}</span>
                           <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                            {k.keşif.length} poz · {k.belgeler.length} belge
+                            {kesifSatirSayisi(k.keşif)} poz · {k.belgeler.length} belge
                           </span>
                         </td>
                         <td className="px-5 py-4">

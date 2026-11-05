@@ -51,6 +51,8 @@ function baslangicAyari(onizleme: SurveyWorkbookPreview, sayfa: SayfaVerisi): Ic
     sonSatir: null,
     esleme: eslemeOnerisi(ham?.suggestedColumnMap ?? {}, sayfa.sutunSayisi),
     birimNormalize: true,
+    otomatikNumara: true,
+    kokBasligi: '',
   }
 }
 
@@ -150,18 +152,21 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
           : false
 
   /** 3. adımdan 4.'ye geçerken Ark.Excel ile seçilen eşleme/aralık üzerinden ayrıştırır */
-  const belgeGetir = async () => {
-    if (!dosya || !ayar || !sayfa) return
+  const belgeGetir = async (kaynak: IceAktarAyar | null = ayar) => {
+    if (!dosya || !kaynak || !sayfa) return
+    const ayarKaynagi = kaynak
     setBelgeYukleniyor(true)
     setBelgeHatasi('')
     setBelge(null)
     try {
       const b = await kesifEslemeIleIceAktar(dosya, {
         sheetName: sayfa.ad,
-        headerRow: ayar.baslikSatiri,
-        firstDataRow: ayar.ilkSatir,
-        lastDataRow: ayar.sonSatir,
-        columnMap: eslemeSorgusu(ayar.esleme),
+        headerRow: ayarKaynagi.baslikSatiri,
+        firstDataRow: ayarKaynagi.ilkSatir,
+        lastDataRow: ayarKaynagi.sonSatir,
+        columnMap: eslemeSorgusu(ayarKaynagi.esleme),
+        autoNumber: ayarKaynagi.otomatikNumara,
+        rootTitle: ayarKaynagi.kokBasligi,
       })
       setBelge(b)
     } catch (e) {
@@ -295,6 +300,10 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
             sadeceSorunlu={sadeceSorunlu}
             onSadeceSorunlu={setSadeceSorunlu}
             onTekrar={() => void belgeGetir()}
+            onYenidenGetir={(kismi) => {
+              guncelle(kismi)
+              void belgeGetir({ ...ayar, ...kismi })
+            }}
           />
         )}
       </div>
@@ -711,6 +720,7 @@ function OnizlemeAdimi({
   sadeceSorunlu,
   onSadeceSorunlu,
   onTekrar,
+  onYenidenGetir,
 }: {
   ayar: IceAktarAyar
   sonuc: ReturnType<typeof belgeyiSatirlaraCevir> | null
@@ -724,7 +734,10 @@ function OnizlemeAdimi({
   sadeceSorunlu: boolean
   onSadeceSorunlu: (b: boolean) => void
   onTekrar: () => void
+  /** Backend ayrıştırmasını etkileyen bir seçenek değişti: ayarı güncelle ve yeniden ayrıştır */
+  onYenidenGetir: (kismi: Partial<IceAktarAyar>) => void
 }) {
+  const [kokGirdi, setKokGirdi] = useState(ayar.kokBasligi)
   // F6: aktarılacak satırlar (birim düzeltme vb. seçenekler uygulanmış haliyle) kurallara göre doğrulanır.
   // Bu bilgilendiricidir; içe aktarmayı ENGELLEMEZ — sorunlar aktarım sonrası tabloda "Düzelt" ile giderilir.
   const dogrulama = useKesifDogrulama(sonuc?.satirlar ?? BOS_KESIF, { bekleMs: 150 })
@@ -795,11 +808,54 @@ function OnizlemeAdimi({
             Birimleri düzelt (m2 → m², m3 → m³)
           </label>
 
+          <div className="space-y-2 border-t border-line pt-3">
+            <label className="flex cursor-pointer items-start gap-2.5 text-[13px] text-black">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-black"
+                checked={ayar.otomatikNumara}
+                onChange={(e) => onYenidenGetir({ otomatikNumara: e.target.checked })}
+              />
+              <span>
+                Bölüm ve pozları otomatik numaralandır
+                <span className="block text-[12px] text-muted-foreground">
+                  01 → 01.01 → 01.01.0010 düzeninde yeniden numaralanır. Dosyadaki numaralar yalnızca bölüm
+                  hiyerarşisini anlamak için kullanılır; özgün kod “Kaynak Kod” sütununda korunur.
+                </span>
+              </span>
+            </label>
+            {ayar.otomatikNumara && belge?.sections.some((b) => b.isGenerated) && (
+              <label className="block">
+                <span className="mb-1 block text-[12px] font-medium text-muted-foreground">
+                  Üst satır (01) açıklaması
+                </span>
+                <input
+                  type="text"
+                  value={kokGirdi}
+                  placeholder={belge.sections.find((b) => b.isGenerated)?.title}
+                  onChange={(e) => setKokGirdi(e.target.value)}
+                  onBlur={() => {
+                    if (kokGirdi.trim() !== ayar.kokBasligi) onYenidenGetir({ kokBasligi: kokGirdi.trim() })
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.currentTarget.blur()
+                  }}
+                  className={selectCls}
+                />
+                <span className="mt-1 block text-[11px] text-muted-foreground">
+                  Dosyada üst satır yoktu (ör. V.1., V.2. bölümlerinin “V” üstü); projenin / keşfin açıklaması
+                  olarak 01 numaralı satır eklendi. Değiştirip Enter’a basın.
+                </span>
+              </label>
+            )}
+          </div>
+
           <p className="text-[12px] leading-5 text-muted-foreground">
             Başlık/poz ayrımı Ark.Excel tarafından yapılır: birim veya miktarı olan satırlar{' '}
             <strong className="text-ink">poz</strong>, birim ve miktarı olmayan kodlu satırlar{' '}
-            <strong className="text-ink">başlık</strong> (ana grup) olur. Açıklama satırları ilgili kaleme not
-            olarak eklenir; toplam satırı aktarılmaz.
+            <strong className="text-ink">başlık</strong> (ana grup) olur. <strong className="text-ink">Numarası
+            olmayan satırlar</strong> (çok satırlı açıklamalar, notlar) önceki satırın devamı olarak ayrı
+            satırlar halinde tabloya eklenir; toplam satırı aktarılmaz.
           </p>
         </div>
 
@@ -846,9 +902,10 @@ function OnizlemeAdimi({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <Ozet etiket="Başlık" deger={sonuc.ozet.grup} />
             <Ozet etiket="Poz" deger={sonuc.ozet.kalem} />
+            <Ozet etiket="Açıklama satırı" deger={sonuc.ozet.yorum} />
             <Ozet etiket="Uyarı" deger={sonuc.ozet.uyari} ton={sonuc.ozet.uyari ? 'warning' : undefined} />
             <Ozet
               etiket="Hesaplanan toplam"
@@ -905,7 +962,7 @@ function OnizlemeAdimi({
           <table className="w-full border-collapse text-[12px]">
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-line bg-surface-muted">
-                {['Excel', 'Durum', 'Poz No', 'Başlık', 'Poz Tanımı', 'Birim', 'Miktar', 'Malzeme', 'İşçilik', 'GGK', 'Birim Fiyat', 'Not'].map(
+                {['Excel', 'Durum', 'Poz No', 'Kaynak Kod', 'Başlık', 'Poz Tanımı', 'Birim', 'Miktar', 'Malzeme', 'İşçilik', 'GGK', 'Birim Fiyat', 'Not'].map(
                   (h) => (
                     <th
                       key={h}
@@ -920,7 +977,7 @@ function OnizlemeAdimi({
             <tbody>
               {gorunen.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="px-3 py-6 text-center text-muted-foreground">
+                  <td colSpan={13} className="px-3 py-6 text-center text-muted-foreground">
                     Gösterilecek satır yok.
                   </td>
                 </tr>
@@ -928,10 +985,11 @@ function OnizlemeAdimi({
               {gorunen.map((o, i) => {
                 const s = o.satir
                 const grup = s.seviye === 1
+                const yorum = Boolean(s.yorum)
                 return (
                   <tr
                     key={`${o.kaynakSatir}-${i}`}
-                    className={`border-b border-border last:border-0 ${grup ? 'bg-surface-soft font-bold' : ''}`}
+                    className={`border-b border-border last:border-0 ${grup ? 'bg-surface-soft font-bold' : ''} ${yorum ? 'text-muted-foreground italic' : ''}`}
                   >
                     <td className="px-2.5 py-1.5 font-mono text-muted-foreground">{o.kaynakSatir || '—'}</td>
                     <td className="px-2.5 py-1.5">
@@ -943,18 +1001,17 @@ function OnizlemeAdimi({
                         {o.durum === 'uyari' ? 'Uyarı' : 'Tamam'}
                       </span>
                     </td>
-                    <td className="px-2.5 py-1.5 font-mono whitespace-nowrap">
-                      {s.seviye === 3 ? '   ' : ''}
-                      {s.pozNo}
-                    </td>
+                    <td className="px-2.5 py-1.5 font-mono whitespace-nowrap">{s.pozNo}</td>
+                    <td className="px-2.5 py-1.5 font-mono whitespace-nowrap text-muted-foreground">{s.kaynakKodu ?? ''}</td>
                     <td className="max-w-[240px] truncate px-2.5 py-1.5" title={grup ? s.pozTanimi : undefined}>
                       {grup ? s.pozTanimi : ''}
                     </td>
                     <td className="max-w-[280px] truncate px-2.5 py-1.5 font-normal" title={grup ? undefined : s.pozTanimi}>
+                      {yorum && <span className="mr-1 not-italic">↳</span>}
                       {grup ? '' : s.pozTanimi}
                     </td>
                     <td className="px-2.5 py-1.5">{s.birim}</td>
-                    <td className="px-2.5 py-1.5 text-right tabular-nums">{grup ? '' : sayiGoster(s.miktar)}</td>
+                    <td className="px-2.5 py-1.5 text-right tabular-nums">{grup || yorum ? '' : sayiGoster(s.miktar)}</td>
                     <td className="px-2.5 py-1.5 text-right tabular-nums">{sayiGoster(s.malzeme)}</td>
                     <td className="px-2.5 py-1.5 text-right tabular-nums">{sayiGoster(s.iscilik)}</td>
                     <td className="px-2.5 py-1.5 text-right tabular-nums">{sayiGoster(s.ggk)}</td>

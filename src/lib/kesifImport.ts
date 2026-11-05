@@ -31,6 +31,10 @@ export type IceAktarAyar = {
   sonSatir: number | null
   esleme: Esleme
   birimNormalize: boolean
+  /** Bölüm ve pozları otomatik numaralandır (01, 01.01, 01.01.0010); özgün kodlar "Kaynak Kod"da korunur */
+  otomatikNumara: boolean
+  /** Otomatik numaralandırmada üretilen kök satırın (01) açıklaması; boşsa keşif başlığı */
+  kokBasligi: string
 }
 
 export type SayfaVerisi = {
@@ -55,7 +59,7 @@ export type IceAktarSonucu = {
   onizleme: OnizlemeSatiri[]
   /** Belirli bir satıra bağlanamayan backend uyarıları */
   genelUyarilar: string[]
-  ozet: { grup: number; kalem: number; uyari: number }
+  ozet: { grup: number; kalem: number; yorum: number; uyari: number }
 }
 
 /** "TOTAL", "TOPLAM", "Genel Toplam" gibi toplam satırı etiketleri (Ark.Excel ile aynı kural) */
@@ -179,7 +183,7 @@ export function belgeyiSatirlaraCevir(belge: SurveyDocumentDto, ayar: IceAktarAy
 
   const onizleme: OnizlemeSatiri[] = kaynakli.map(({ satir, kaynakSatir }) => {
     let s = satir
-    if (s.seviye !== 1 && ayar.birimNormalize) {
+    if (s.seviye !== 1 && !s.yorum && ayar.birimNormalize) {
       s = { ...s, birim: birimDuzelt(s.birim) }
     }
     const mesajlar = uyarilar.get(kaynakSatir) ?? []
@@ -199,7 +203,8 @@ export function belgeyiSatirlaraCevir(belge: SurveyDocumentDto, ayar: IceAktarAy
     genelUyarilar,
     ozet: {
       grup: satirlar.filter((s) => s.seviye === 1).length,
-      kalem: satirlar.filter((s) => s.seviye !== 1).length,
+      kalem: satirlar.filter((s) => s.seviye !== 1 && !s.yorum).length,
+      yorum: satirlar.filter((s) => s.yorum).length,
       uyari: (belge.warnings ?? []).length,
     },
   }

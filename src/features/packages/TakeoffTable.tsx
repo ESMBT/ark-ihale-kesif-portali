@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Button as KitButton,
   Spreadsheet,
   type SpreadsheetCellValue,
   type SpreadsheetChange,
@@ -38,6 +39,7 @@ const KESIF_SUTUNLARI: SpreadsheetColumn[] = [
   { key: 'ggk', title: 'GGK', width: 120, align: 'right', format: 'number' },
   { key: 'birimFiyat', title: 'Birim Fiyat', width: 128, align: 'right', format: 'number' },
   { key: 'toplam', title: 'Toplam Tutar', width: 144, align: 'right', format: 'number' },
+  { key: 'kaynakKodu', title: 'Kaynak Kod', width: 120, align: 'left' },
 ]
 
 const OZET_SUTUNLARI: SpreadsheetColumn[] = [
@@ -72,7 +74,7 @@ function kesifSheetsOlustur(satirlar: KesifSatiri[], goster: string): Spreadshee
     if (s.seviye === 1) {
       aktifGrupId = s.id
       grupAltKalemleri.set(s.id, [])
-    } else if (aktifGrupId) {
+    } else if (aktifGrupId && !s.yorum) {
       grupAltKalemleri.get(aktifGrupId)?.push(s)
     }
   }
@@ -148,12 +150,34 @@ function kesifSheetsOlustur(satirlar: KesifSatiri[], goster: string): Spreadshee
               : gizliTutarToplam,
           bold: true,
         },
+        kaynakKodu: s.kaynakKodu ?? '',
       }
 
       return {
         id: s.id,
         kind: 'group',
         cells,
+      }
+    }
+
+    // Yorum / devam satırı: numarasız metin, önceki satırın devamı gibi (soluk + italik)
+    if (s.yorum) {
+      return {
+        id: s.id,
+        kind: 'note',
+        cells: {
+          pozNo: '',
+          pozTanimi: s.pozTanimi,
+          markaModel: '',
+          birim: '',
+          miktar: '',
+          malzeme: '',
+          iscilik: '',
+          ggk: '',
+          birimFiyat: '',
+          toplam: '',
+          kaynakKodu: '',
+        },
       }
     }
 
@@ -174,6 +198,7 @@ function kesifSheetsOlustur(satirlar: KesifSatiri[], goster: string): Spreadshee
         ggk: s.ggk ?? '',
         birimFiyat: ayriBirimFiyatVar ? s.birimFiyat! : `=F${excelRow}+G${excelRow}+H${excelRow}`,
         toplam: `=E${excelRow}*I${excelRow}`,
+        kaynakKodu: s.kaynakKodu ?? '',
       },
     }
   })
@@ -204,6 +229,7 @@ function kesifSheetsOlustur(satirlar: KesifSatiri[], goster: string): Spreadshee
       ggk: { raw: toplamFormul('H'), bold: true },
       birimFiyat: '',
       toplam: { raw: toplamFormul('J'), bold: true },
+      kaynakKodu: '',
     },
   })
 
@@ -286,6 +312,8 @@ export function TakeoffTable({
   const [kaydedildiBilgisi, setKaydedildiBilgisi] = useState(false)
   const [sihirbazAcik, setSihirbazAcik] = useState(false)
   const [odak, setOdak] = useState<{ rowId: string; columnKey?: string; token: number } | null>(null)
+  // Tablodaki seçili satır (yorum satırı "seçili satırın altına" eklenir)
+  const [seciliSatirId, setSeciliSatirId] = useState<string | null>(null)
   // Kurallar backend'de (Ark.Excel); satırlar değiştikçe debounce ile doğrulanır
   const dogrulama = useKesifDogrulama(satirlar)
   // F3: sorunlu hücrelerde işaret + ipucu
@@ -373,7 +401,7 @@ export function TakeoffTable({
 
   const istatistik = useMemo(() => {
     const gruplar = satirlar.filter((s) => s.seviye === 1).length
-    const kalemler = satirlar.filter((s) => s.seviye !== 1)
+    const kalemler = satirlar.filter((s) => s.seviye !== 1 && !s.yorum)
     const toplamMiktar = kalemler.reduce((acc, s) => acc + (s.miktar || 0), 0)
     const toplamTutar = kalemler.reduce((acc, s) => {
       const bf = s.birimFiyat ?? (s.malzeme ?? 0) + (s.iscilik ?? 0) + (s.ggk ?? 0)
@@ -403,6 +431,10 @@ export function TakeoffTable({
           const pozNo = String(hucreHamDeger(r.cells.pozNo)).trim()
           const pozTanimi = String(hucreHamDeger(r.cells.pozTanimi)).trim()
           const markaModel = String(hucreHamDeger(r.cells.markaModel)).trim()
+          const kaynakKodu = String(hucreHamDeger(r.cells.kaynakKodu)).trim() || undefined
+
+          // Yorum satırında yalnızca metin düzenlenir
+          if (s.yorum) return { ...s, pozTanimi }
 
           if (s.seviye === 1) {
             return {
@@ -410,6 +442,7 @@ export function TakeoffTable({
               pozNo: pozNo || s.pozNo,
               pozTanimi: pozTanimi || s.pozTanimi,
               markaModel: markaModel || undefined,
+              kaynakKodu,
             }
           }
 
@@ -425,6 +458,7 @@ export function TakeoffTable({
             pozNo,
             pozTanimi,
             markaModel: markaModel || undefined,
+            kaynakKodu,
             birim,
             miktar,
             malzeme,
@@ -435,6 +469,13 @@ export function TakeoffTable({
         }),
       )
     }
+  }
+
+  /** Bir satırın ardışık yorum/devam satırlarının bittiği indeks (dahil); yorum yoksa satırın kendisi */
+  const yorumlarinSonu = (liste: KesifSatiri[], idx: number) => {
+    let i = idx
+    while (liste[i + 1]?.yorum) i += 1
+    return i
   }
 
   const handleInsertRow = (cmd: SpreadsheetRowCommand) => {
@@ -454,17 +495,50 @@ export function TakeoffTable({
       if (hedefIdx === -1) {
         klon.push(yeniSatir)
       } else {
-        klon.splice(hedefIdx + 1, 0, yeniSatir)
+        // Yeni poz, seçili satırın yorum/devam satırlarından sonra gelir (devamları bölmez)
+        klon.splice(yorumlarinSonu(prev, hedefIdx) + 1, 0, yeniSatir)
       }
       setSheets(kesifSheetsOlustur(klon, goster))
       return klon
     })
   }
 
+  /** Seçili satırın (ve mevcut devam satırlarının) altına yorum / devam satırı ekler */
+  const handleYorumEkle = () => {
+    const yeni: KesifSatiri = {
+      id: `not-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      seviye: 2,
+      yorum: true,
+      pozNo: '',
+      pozTanimi: '',
+      birim: '',
+      miktar: 0,
+      teklifKirilimi: 'Malzeme + İşçilik',
+    }
+    // "Sadece ana gruplar" görünümünde yorum görünmez; tümünü göster
+    const gosterim = goster === 'Sadece ana gruplar' ? 'Tümü' : goster
+    if (gosterim !== goster) setGoster(gosterim)
+
+    setSatirlar((prev) => {
+      const hedefIdx = seciliSatirId ? prev.findIndex((s) => s.id === seciliSatirId) : -1
+      const klon = [...prev]
+      if (hedefIdx === -1) klon.push(yeni)
+      else klon.splice(yorumlarinSonu(prev, hedefIdx) + 1, 0, yeni)
+      setSheets(kesifSheetsOlustur(klon, gosterim))
+      return klon
+    })
+    setKaydedildiBilgisi(false)
+    setOdak({ rowId: yeni.id, columnKey: 'pozTanimi', token: Date.now() })
+  }
+
   const handleDeleteRow = (cmd: SpreadsheetRowCommand) => {
     if (!cmd.rowId) return
     setSatirlar((prev) => {
-      const klon = prev.filter((s) => s.id !== cmd.rowId)
+      const idx = prev.findIndex((s) => s.id === cmd.rowId)
+      if (idx === -1) return prev
+      // Bir pozu silerken ona bağlı yorum/devam satırları da silinir
+      const son = yorumlarinSonu(prev, idx)
+      const klon = prev.filter((_, i) => i < idx || i > son)
       setSheets(kesifSheetsOlustur(klon, goster))
       return klon
     })
@@ -606,6 +680,12 @@ export function TakeoffTable({
             readOnly={!duzenle}
             collapsibleGroups
             cellMarks={hucreIsaretleri}
+            onSelectionChange={(a) => setSeciliSatirId(a && a.sheetId === 'kesif' ? a.rowId : null)}
+            toolbar={
+              <KitButton variant="ghost" size="sm" disabled={!duzenle} onClick={handleYorumEkle}>
+                Yorum satırı ekle
+              </KitButton>
+            }
             focusRequest={odak ? { ...odak, sheetId: 'kesif' } : undefined}
             onInsertRow={handleInsertRow}
             onDeleteRow={handleDeleteRow}

@@ -81,7 +81,8 @@ export const KESIF_ASAMASINDA_YOKSAYILAN_KODLAR = ['W02'] as const
 
 /** KesifSatiri[] → backend satır modeli. Başlıklar (seviye 1) birim/miktarsız gönderilir. */
 export function satirlariDogrulamaSatirlarinaCevir(satirlar: KesifSatiri[]): DogrulamaSatiri[] {
-  return satirlar.map((s) => {
+  // Yorum / devam satırları poz değildir; doğrulamaya girmez
+  return satirlar.filter((s) => !s.yorum).map((s) => {
     if (s.seviye === 1) {
       return { id: s.id, number: s.pozNo, description: s.pozTanimi }
     }
@@ -172,26 +173,44 @@ export function kesifDuzelt(fixId: string, satirlar: KesifSatiri[]): Promise<Duz
 export function duzeltmeyiUygula(satirlar: KesifSatiri[], yanit: DuzeltmeYaniti): KesifSatiri[] {
   const mevcut = new Map(satirlar.map((s) => [s.id, s]))
   const ek = Date.now().toString(36)
-  return yanit.rows.map((r) => {
+
+  // Yorum satırları backend'e gönderilmez; bağlı oldukları (önceki yorum olmayan) satırın arkasına korunur
+  const yorumlar = new Map<string | null, KesifSatiri[]>()
+  let onceki: string | null = null
+  for (const s of satirlar) {
+    if (s.yorum) {
+      const liste = yorumlar.get(onceki) ?? []
+      liste.push(s)
+      yorumlar.set(onceki, liste)
+    } else {
+      onceki = s.id
+    }
+  }
+
+  const sonuc: KesifSatiri[] = [...(yorumlar.get(null) ?? [])]
+  for (const r of yanit.rows) {
     const m = mevcut.get(r.id)
     if (m) {
-      return {
+      sonuc.push({
         ...m,
         pozNo: r.number ?? m.pozNo,
         birim: m.seviye === 1 ? m.birim : (r.unit ?? m.birim),
-      }
+      })
+    } else {
+      // Eklenen üst başlık
+      sonuc.push({
+        id: `new-${r.id}-${ek}`,
+        seviye: 1,
+        pozNo: r.number ?? '',
+        pozTanimi: r.description ?? 'BAŞLIK',
+        birim: '',
+        miktar: 0,
+        teklifKirilimi: 'Malzeme + İşçilik',
+      } satisfies KesifSatiri)
     }
-    // Eklenen üst başlık
-    return {
-      id: `new-${r.id}-${ek}`,
-      seviye: 1,
-      pozNo: r.number ?? '',
-      pozTanimi: r.description ?? 'BAŞLIK',
-      birim: '',
-      miktar: 0,
-      teklifKirilimi: 'Malzeme + İşçilik',
-    } satisfies KesifSatiri
-  })
+    sonuc.push(...(yorumlar.get(r.id) ?? []))
+  }
+  return sonuc
 }
 
 export class DogrulamaHatasi extends Error {

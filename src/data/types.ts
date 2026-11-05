@@ -259,18 +259,18 @@ export type KesifSatiri = {
    */
   level?: number
   /** Özel sütun değerleri (sütun anahtarı → sayı): "Nakliye" gibi maliyet sütunları, "Fittings" gibi katsayılar */
-  ekDegerler?: Record<string, number>
+  ekDegerler?: Record<string, number | string>
 }
 
 /**
  * Keşif tablosuna eklenen özel sütun. `maliyet`: Birim Fiyat toplamına eklenir (ör. Nakliye).
  * `katsayi`: hemen solundaki sütunu çarpar; Birim Fiyat'ın hemen solundaysa maliyet toplamını çarpar
- * (ör. Fittings 1,5; boş = 1).
+ * (ör. Fittings 1,5; boş = 1). `metin`: fiyatı etkilemeyen serbest metin (ör. İşveren Kodu); Marka / Model'den sonra gelir.
  */
 export type KesifEkSutun = {
   key: string
   baslik: string
-  tur: 'maliyet' | 'katsayi'
+  tur: 'maliyet' | 'katsayi' | 'metin'
   /** Hangi sütunun sağına yerleştirildiği (Malzeme / İşçilik / GGK ya da başka bir özel sütun) */
   sonra: string
 }

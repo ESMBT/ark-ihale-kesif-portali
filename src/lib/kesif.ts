@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
-import type { KesifSatiri } from '../data/types'
-import { levelDegeri } from './kesifSatir'
+import type { KesifEkSutun, KesifSatiri } from '../data/types'
+import { disaAktarimIstegi, disaAktarimTablosu } from './kesifSutunlar'
 
 export const KESIF_SABLON_BASLIKLARI = [
   'Level',
@@ -70,6 +70,8 @@ export type SurveyItemDto = {
   sourceCode?: string | null
   /** Hiyerarşi seviyesi 1–9 (numaradaki nokta sayısı + 1) */
   level?: number | null
+  /** Özel sütun değerleri (anahtar = SurveyExtraColumnDto.key): maliyet / katsayı için sayı, metin için yazı */
+  extras?: Record<string, number | string | null> | null
 }
 
 export type SurveySectionDto = {
@@ -94,6 +96,8 @@ export type SurveyDocumentDto = {
   documentTitle?: string | null
   disciplineTitle?: string | null
   headerRow?: number | null
+  /** Dosyadaki özel sütunlar (Nakliye, Fittings, İşveren Kodu …) */
+  extraColumns?: Array<{ key: string; title: string; kind: 'cost' | 'factor' | 'text'; after: string }>
   sections: SurveySectionDto[]
   totals?: SurveyTotalsDto | null
   computedTotals: SurveyTotalsDto
@@ -245,6 +249,9 @@ export function surveyDocumentToKaynakliSatirlar(doc: SurveyDocumentDto): Kaynak
           markaModel: item.brands?.trim() || undefined,
           kaynakKodu: kaynakKodu(item.sourceCode, pozNo),
           level: item.level ?? undefined,
+          ekDegerler: item.extras
+            ? (Object.fromEntries(Object.entries(item.extras).filter(([, v]) => v != null)) as Record<string, number | string>)
+            : undefined,
         },
       })
 
@@ -389,41 +396,17 @@ export async function kesifSablonuIndir() {
     // Backend erişilemezse yerel şablon üretimine düş
   }
 
-  // Level: 1–9 (numaradaki nokta sayısı + 1); "C" = açıklama (yorum) satırı
-  const ornekSatir = [
-    1,
-    'KABA YAPI İŞLERİ',
-    '',
-    '',
-    '',
-    'Malzeme + İşçilik',
-    '',
-    '',
-    '',
-    '',
-    '',
-  ]
-  const ornekSatir2 = [
-    2,
-    '2 CM MERMER ZEMİN KAPLAMASI',
-    'Zemin kaplaması ve teslim',
-    'm²',
-    472,
-    'Malzeme + İşçilik',
-    '',
-    '',
-    '',
-    '',
-    '',
-  ]
-
-  const ornekYorum = ['C', 'Cilalı, arka yüz epoksi fileli — önceki satırın devamı (açıklama)', '', '', '', '', '', '', '', '', '']
-
-  const ws = XLSX.utils.aoa_to_sheet([[...KESIF_SABLON_BASLIKLARI], ornekSatir, ornekSatir2, ornekYorum])
-
-  ws['!cols'] = [...KESIF_SABLON_BASLIKLARI].map((b) => ({
-    wch: b === 'Poz Tanımı' ? 42 : b === 'Açıklama' ? 28 : 18,
-  }))
+  // Backend şablonuyla aynı düzen: Level (1–9, C = yorum), Poz Kodu, Poz Tanımı …
+  const baslik = ['Level', 'Poz Kodu', 'Poz Tanımı', 'Marka / Model', 'Birim', 'Miktar', 'Malzeme', 'İşçilik', 'GGK']
+  const ws = XLSX.utils.aoa_to_sheet([
+    baslik,
+    [1, 'KY', 'KABA YAPI İŞLERİ', '', '', '', '', '', ''],
+    [2, 'KY.01', 'BETON İŞLERİ', '', '', '', '', '', ''],
+    [3, 'KY.01.001', 'C30/37 HAZIR BETON', 'Hazır beton firması', 'm³', 150, 95, 18, ''],
+    ['C', '', 'Pompa ile dökülür, vibratör kullanılır (önceki satırın devamı).', '', '', '', '', '', ''],
+    [3, 'KY.01.002', 'DONATI ÇELİĞİ', '', 'ton', 12, 640, 85, ''],
+  ])
+  ws['!cols'] = baslik.map((b) => ({ wch: b === 'Poz Tanımı' ? 52 : b === 'Poz Kodu' ? 16 : 14 }))
 
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Keşif')
@@ -713,14 +696,15 @@ async function kesifDosyasiYerelOku(file: File): Promise<ImportSonucu> {
 }
 
 /** Keşif tablosunu Ark.Excel SurveyExcelExporter ile Excel'e aktarır */
-export async function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string) {
+export async function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string, ekSutunlar: KesifEkSutun[] = []) {
   const safeCode = (projeKodu || 'proje').replace(/[^a-zA-Z0-9_-]/g, '_')
+  // Portaldaki yapıyla (Level, Poz Kodu, özel sütunlar) yazılır; dosya sihirbazla geri içe aktarılabilir
+  const istek = disaAktarimIstegi(satirlar, ekSutunlar, projeKodu)
   try {
-    const doc = kesifSatirlariToSurveyDocument(satirlar, projeKodu)
-    const res = await fetch(`${EXCEL_API_BASE}/export`, {
+    const res = await fetch(`${EXCEL_API_BASE}/export-table`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(doc),
+      body: JSON.stringify(istek),
     })
     if (res.ok) {
       const blob = await res.blob()
@@ -731,25 +715,7 @@ export async function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string)
     // Backend erişilemezse yerel dışa aktarıma düş
   }
 
-  const veri = satirlar.map((s) =>
-    s.yorum
-      ? ['C', s.pozTanimi, '', '', '', '', '', '', '', '', '']
-      : [
-    levelDegeri(s),
-    s.pozTanimi,
-    s.aciklama ?? '',
-    s.birim,
-    s.miktar,
-    s.teklifKirilimi,
-    s.malzeme ?? '',
-    s.iscilik ?? '',
-    s.ggk ?? '',
-    '',
-    s.markaModel ?? '',
-  ],
-  )
-
-  const ws = XLSX.utils.aoa_to_sheet([[...KESIF_SABLON_BASLIKLARI], ...veri])
+  const ws = XLSX.utils.aoa_to_sheet(disaAktarimTablosu(istek))
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Keşif')
   XLSX.writeFile(wb, `Kesif_${safeCode}.xlsx`)

@@ -33,7 +33,14 @@ import {
   levelNumaralariniUygula,
   levelleriDoldur,
 } from '../../lib/kesifSatir'
-import { birimFiyatFormulu, birimFiyatHesapla, ekDeger, kesifSutunlari, sutunHarfleri } from '../../lib/kesifSutunlar'
+import {
+  birimFiyatFormulu,
+  birimFiyatHesapla,
+  ekDeger,
+  ekSutunlariBirlestir,
+  kesifSutunlari,
+  sutunHarfleri,
+} from '../../lib/kesifSutunlar'
 import { DogrulamaSeridi } from './DogrulamaSeridi'
 import { DuzeltOnizlemeModal } from './DuzeltOnizlemeModal'
 import { EkSutunModal } from './EkSutunModal'
@@ -244,7 +251,10 @@ function kesifSheetsOlustur(
       toplam: `=${harf('miktar')}${excelRow}*${harf('birimFiyat')}${excelRow}`,
     }
     // Katsayı sütunları her zaman dolu gösterilir (boş = 1); maliyet sütunları boş kalabilir
-    for (const e of ek) cells[e.key] = e.tur === 'katsayi' ? ekDeger(s, e) : (s.ekDegerler?.[e.key] ?? '')
+    for (const e of ek) {
+      cells[e.key] =
+        e.tur === 'katsayi' ? ekDeger(s, e) : e.tur === 'metin' ? String(s.ekDegerler?.[e.key] ?? '') : (s.ekDegerler?.[e.key] ?? '')
+    }
 
     kesifRows.push({ id: s.id, kind: 'item', level, cells })
   })
@@ -415,6 +425,15 @@ export function TakeoffTable({
     }
   }
 
+  const duzeltOnekle = async (onek: string) => {
+    if (!duzeltme) return
+    try {
+      setDuzeltme({ fixId: duzeltme.fixId, yanit: await kesifDuzelt(duzeltme.fixId, satirlar, onek) })
+    } catch (e) {
+      setDuzeltHatasi(e instanceof Error ? e.message : 'Düzeltme hazırlanamadı.')
+    }
+  }
+
   const duzeltUygula = (yanit: DuzeltmeYaniti) => {
     if (!duzeltme) return
     const yeni = duzeltmeyiUygula(satirlar, yanit)
@@ -532,8 +551,13 @@ export function TakeoffTable({
       const birimFiyat = sayiCozumle(hucreHamDeger(r.cells.birimFiyat))
 
       // Özel sütun değerleri; katsayı hücresi boşaltılırsa (= 1) tablo varsayılan değeriyle yeniden kurulur
-      const ekDegerler: Record<string, number> = {}
+      const ekDegerler: Record<string, number | string> = {}
       for (const e of ekSutunlar) {
+        if (e.tur === 'metin') {
+          const t = String(hucreHamDeger(r.cells[e.key])).trim()
+          if (t) ekDegerler[e.key] = t
+          continue
+        }
         const v = sayiCozumle(hucreHamDeger(r.cells[e.key]))
         if (v !== undefined) ekDegerler[e.key] = v
         else if (e.tur === 'katsayi') durum.yapiDegisti = true
@@ -673,11 +697,24 @@ export function TakeoffTable({
     setSheets(olustur(levelleriDoldur(paket.keşif), goster))
   }
 
-  const iceAktarUygula = (yeniSatirlar: KesifSatiri[], mod: AktarimModu) => {
-    const yeniListe = mod === 'degistir' ? yeniSatirlar : [...satirlar, ...yeniSatirlar]
+  const iceAktarUygula = (yeniSatirlar: KesifSatiri[], mod: AktarimModu, gelenEk: KesifEkSutun[] = []) => {
+    // Dosyadaki özel sütunlar (Nakliye, Fittings…) mevcutlarla ad + türe göre birleştirilir; satır değerleri yeni anahtarlara taşınır
+    const { birlesik, harita } = ekSutunlariBirlestir(ekSutunlar, gelenEk)
+    const tasinan = yeniSatirlar.map((s) =>
+      s.ekDegerler
+        ? {
+            ...s,
+            ekDegerler: Object.fromEntries(
+              Object.entries(s.ekDegerler).flatMap(([k, v]) => (harita[k] ? [[harita[k], v] as const] : [])),
+            ),
+          }
+        : s,
+    )
+    const yeniListe = mod === 'degistir' ? tasinan : [...satirlar, ...tasinan]
+    setEkSutunlar(birlesik)
     setSatirlar(yeniListe)
-    setSheets(olustur(yeniListe, goster))
-    onKaydet(levelNumaralariniUygula(yeniListe), ekSutunlar)
+    setSheets(olustur(yeniListe, goster, birlesik))
+    onKaydet(levelNumaralariniUygula(yeniListe), birlesik)
     setKaydedildiBilgisi(true)
     setSihirbazAcik(false)
     setDuzenle(true)
@@ -727,7 +764,7 @@ export function TakeoffTable({
               <Button
                 variant="secondary"
                 icon="download"
-                onClick={() => void kesifDisaAktar(kaydedilecek, paket.ad)}
+                onClick={() => void kesifDisaAktar(kaydedilecek, paket.ad, ekSutunlar)}
               >
                 Dışa Aktar
               </Button>
@@ -885,6 +922,8 @@ export function TakeoffTable({
           yanit={duzeltme.yanit}
           satirlar={satirlar}
           birimler={birimSecenekleri}
+          fixId={duzeltme.fixId}
+          onOnekle={duzeltOnekle}
           onUygula={duzeltUygula}
           onVazgec={() => setDuzeltme(null)}
         />

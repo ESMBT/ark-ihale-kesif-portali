@@ -1,4 +1,4 @@
-import type { KesifSatiri } from '../data/types'
+import type { KesifEkSutun, KesifSatiri } from '../data/types'
 import {
   surveyDocumentToKaynakliSatirlar,
   type SurveyDocumentDto,
@@ -58,6 +58,8 @@ export type IceAktarSonucu = {
   /** Belirli bir satıra bağlanamayan backend uyarıları */
   genelUyarilar: string[]
   ozet: { grup: number; kalem: number; yorum: number; uyari: number }
+  /** Dosyadaki özel sütunlar (anahtarlar belgeye özgü: ek1, ek2 …; satırların `ekDegerler`i bunlarla gelir) */
+  ekSutunlar: KesifEkSutun[]
 }
 
 /** "TOTAL", "TOPLAM", "Genel Toplam" gibi toplam satırı etiketleri (Ark.Excel ile aynı kural) */
@@ -230,10 +232,17 @@ export function belgeyiSatirlaraCevir(belge: SurveyDocumentDto, ayar: IceAktarAy
   }
 
   const satirlar = onizleme.map((o) => o.satir)
+  const ekSutunlar: KesifEkSutun[] = (belge.extraColumns ?? []).map((c) => ({
+    key: c.key,
+    baslik: c.title,
+    tur: c.kind === 'cost' ? 'maliyet' : c.kind === 'factor' ? 'katsayi' : 'metin',
+    sonra: c.kind === 'text' ? '' : c.after,
+  }))
   return {
     satirlar,
     onizleme,
     genelUyarilar,
+    ekSutunlar,
     ozet: {
       grup: satirlar.filter((s) => s.seviye === 1).length,
       kalem: satirlar.filter((s) => s.seviye !== 1 && !s.yorum).length,

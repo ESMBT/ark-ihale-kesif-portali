@@ -20,6 +20,8 @@ export function DuzeltOnizlemeModal({
   yanit,
   satirlar,
   birimler = [],
+  fixId,
+  onOnekle,
   onUygula,
   onVazgec,
 }: {
@@ -29,12 +31,18 @@ export function DuzeltOnizlemeModal({
   satirlar: KesifSatiri[]
   /** Tanımlı birimler: "Yeni" birim değeri bu listeden seçilebilir */
   birimler?: string[]
+  /** Çalıştırılan düzeltmenin kimliği; `fill-codes` için önek alanı gösterilir */
+  fixId?: string
+  /** Önek değişince düzeltme önizlemesini yeniden hesaplatır */
+  onOnekle?: (onek: string) => Promise<void>
   /** Kullanıcının düzenlediği değerler uygulanmış yanıtla çağrılır */
   onUygula: (yanit: DuzeltmeYaniti) => void
   onVazgec: () => void
 }) {
   // "Yeni" değerler düzenlenebilir: anahtar `${satır}|${alan}` → kullanıcının yazdığı değer
   const [duzenlenen, setDuzenlenen] = useState<Record<string, string>>({})
+  const [onek, setOnek] = useState('')
+  const [hesaplaniyor, setHesaplaniyor] = useState(false)
   const anahtar = (rowId: string, alan?: string | null) => `${rowId}|${alan ?? ''}`
 
   const duzenliYanit = (): DuzeltmeYaniti => {
@@ -88,6 +96,39 @@ export function DuzeltOnizlemeModal({
       }
     >
       <div className="space-y-4">
+        {fixId === 'fill-codes' && onOnekle && (
+          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-surface-soft px-4 py-3">
+            <label className="block">
+              <span className="mb-1 block text-[12px] font-medium text-muted-foreground">Poz kodu öneki</span>
+              <input
+                value={onek}
+                placeholder="Otomatik (mevcut kodlardan)"
+                onChange={(e) => setOnek(e.target.value)}
+                className="h-9 w-56 rounded-md border border-line bg-white px-2.5 text-[13px] text-ink outline-none focus:border-black focus:ring-2 focus:ring-black/10"
+              />
+            </label>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={hesaplaniyor}
+              onClick={async () => {
+                setHesaplaniyor(true)
+                setDuzenlenen({})
+                try {
+                  await onOnekle(onek)
+                } finally {
+                  setHesaplaniyor(false)
+                }
+              }}
+            >
+              {hesaplaniyor ? 'Hesaplanıyor…' : 'Yeniden hesapla'}
+            </Button>
+            <p className="min-w-[200px] flex-1 text-[12px] leading-5 text-muted-foreground">
+              Boş bırakırsanız mevcut kodların önek ve numarası sürdürülür (AHU 01…05 → AHU 06); hiç kod yoksa
+              <span className="font-mono"> POZ-0001</span> kullanılır. Örn. <span className="font-mono">ÖBF </span> yazın.
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2 text-[13px]">
           {guncellenen > 0 && <Badge tone="info">{guncellenen} alan güncellenecek</Badge>}
           {eklenen > 0 && <Badge tone="success">{eklenen} yeni satır eklenecek</Badge>}

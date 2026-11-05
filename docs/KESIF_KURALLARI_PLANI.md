@@ -318,27 +318,28 @@ Kabul: tablo harf kaydırmasına rağmen aynı toplamları verir (mevcut test + 
 | Madde | Durum |
 |-------|-------|
 | 0.1 anahtar → harf (`lib/kesifSutunlar.ts`) | ✅ |
-| 0.2 Poz Kodu (Level'dan sonra), sihirbaz etiketi | ✅ (dışa aktarma / yerel yedek şablon başlıkları ⏳) |
+| 0.2 Poz Kodu (Level'dan sonra), sihirbaz etiketi, dışa aktarma ve yerel yedek şablon başlıkları | ✅ |
 | 0.3 Detay / İcmal | ✅ |
 | 0.4 Türkçe etiketler, "Keşfi Kontrol Et" | ✅ portal `labels` ile (ui-kit varsayılanları aksansız kaldı — testler o metinlere bağlı) |
-| 0.5 X (kapat) kontrolü | ⏳ kod hatası değil; küçük ekran doğrulanmadı |
+| 0.5 X (kapat) kontrolü | ✅ kod hatası değildi; yine de Modal başlık + alt çubuk her zaman görünür (420 px yükseklikte doğrulandı) |
 | 1.1 birim varsa miktar (E04) | ✅ zaten vardı, test eklendi |
 | 1.2 W02 sihirbazda gizli | ✅ zaten hook'ta filtreli |
 | 1.3 E08 / E09 / W05 + "Poz kodlarını doldur" (`fill-codes`) | ✅ — E08 yalnızca tabloda bazı kodlar varken; hiç kod yoksa tek uyarı W05 (demo paketleri yayın kapısında kilitlenmesin) |
 | 2.1 Düzelt'te düzenlenebilir "Yeni" + birim listesi, birim eşanlamlıları | ✅ |
 | 2.2 Önceki / Sonraki sorun | ✅ |
-| 2.3 Aralığı önizlemeden tıklayarak seçme | ⏳ |
+| 2.3 Aralığı önizlemeden tıklayarak seçme | ✅ "Tabloda satıra tıklayınca: Başlık / İlk veri / Son veri satırı" |
 | 3.1 Başlıkta yalnızca toplam tutar | ✅ |
 | 3.2 Birim açılır liste (ui-kit `options`) | ✅ datalist: serbest yazım serbest, tanımsız birim E02 ile işaretlenir |
 | 3.3 Sütun salt-okunur + başlıkta formül (ui-kit `readOnly`, `formulaHint`) | ✅ |
 | 3.4 Özel sütunlar (maliyet / katsayı, "Sütun ekle") | ✅ — kayıt `paket.kesifSutunlari` + `satir.ekDegerler` |
-| 4.1 Poz kodu önek/stil seçeneği arayüzü, İşveren kodu | ⏳ (API `prefix` parametresi hazır; önek mevcut kodlardan sürdürülür) |
+| 4.1 Poz kodu öneki arayüzü, İşveren kodu | ✅ "Poz kodlarını doldur" önizlemesinde önek alanı; İşveren Kodu = "Metin" türünde özel sütun (Marka / Model'den sonra). Alfabetik/numerik stil seçeneği ⏳ |
 | 4.2 Level değişimi / başlık silme (A grubu) | ✅ önceki turda |
-| 4.3 Ark.Excel'de özel sütun rolleri; dışa aktarmada ek sütunlar | ⏳ |
+| 4.3 Ark.Excel'de özel sütun rolleri (`extraCost`, `extraFactor`, `extraText`); dışa aktarmada ek sütunlar | ✅ `POST /export-table` (Level, Poz Kodu, "Nakliye (maliyet)" gibi parantezli başlıklar); geri içe aktarmada otomatik eşlenir |
 | 4.4 Şablon (Level / Poz Kodu, Kurallar sayfası, Level + Birim listeleri) | ✅ `SurveyTemplateBuilder` |
 
 Ek bulgular: Poz No'su boş ama birimi / miktarı olan satır artık yorum sayılmayıp **poz** olur (toplantıdaki "boş numara yorum gibi davranıyor"
-sorununun diğer yüzü). Açık: `Dışa Aktar` hâlâ eski "Sıra No." düzeninde yazar; Poz Kodu ve özel sütunlar dışa aktarılmaz.
+sorununun diğer yüzü). Dışa aktarma artık tablonun kendi yapısında (Level / Poz Kodu / özel sütunlar) yazar ve sihirbazla geri içe aktarılabilir;
+birim fiyat ve toplam değer olarak yazılır (Excel formülü değil). Sürekli açık: serbest formül girişi (D6), poz kodu alfabetik/numerik stil seçeneği.
 
 ### Karar gerekenler
 

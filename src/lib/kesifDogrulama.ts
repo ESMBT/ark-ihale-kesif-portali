@@ -168,11 +168,11 @@ export const ALAN_ETIKETI: Record<string, string> = {
 }
 
 /** Bir otomatik düzeltmeyi backend'de çalıştırır; sonucu uygulamadan önce önizletmek içindir */
-export function kesifDuzelt(fixId: string, satirlar: KesifSatiri[]): Promise<DuzeltmeYaniti> {
+export function kesifDuzelt(fixId: string, satirlar: KesifSatiri[], onek?: string): Promise<DuzeltmeYaniti> {
   return istek<DuzeltmeYaniti>('/fix', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fix: fixId, rows: satirlariDogrulamaSatirlarinaCevir(satirlar) }),
+    body: JSON.stringify({ fix: fixId, rows: satirlariDogrulamaSatirlarinaCevir(satirlar), prefix: onek || undefined }),
   })
 }
 

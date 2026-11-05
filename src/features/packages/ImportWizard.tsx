@@ -3,7 +3,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Icon } from '../../components/ui/Icon'
 import { Modal } from '../../components/ui/Modal'
-import type { KesifSatiri } from '../../data/types'
+import type { KesifEkSutun, KesifSatiri } from '../../data/types'
 import {
   ExcelServisHatasi,
   kesifEslemeIleIceAktar,
@@ -34,7 +34,7 @@ const ONIZLEME_SATIR_LIMITI = 80
 type Props = {
   mevcutSatirSayisi: number
   onClose: () => void
-  onTamam: (satirlar: KesifSatiri[], mod: AktarimModu) => void
+  onTamam: (satirlar: KesifSatiri[], mod: AktarimModu, ekSutunlar: KesifEkSutun[]) => void
 }
 
 const selectCls =
@@ -192,7 +192,7 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
 
   const uygula = () => {
     if (!sonuc || sonuc.satirlar.length === 0) return
-    onTamam(sonuc.satirlar, mevcutSatirSayisi === 0 ? 'degistir' : mod)
+    onTamam(sonuc.satirlar, mevcutSatirSayisi === 0 ? 'degistir' : mod, sonuc.ekSutunlar)
   }
 
   /* ------------------------------- Render ---------------------------- */
@@ -469,6 +469,18 @@ function AralikAdimi({
   onSon: (n: number | null) => void
 }) {
   const toplam = sayfa.toplamSatir
+  // Tabloda satıra tıklayınca neyin seçileceği: başlık, ilk veri satırı ya da son veri satırı
+  const [tiklamaModu, setTiklamaModu] = useState<'baslik' | 'ilk' | 'son'>('baslik')
+  const satiraTiklandi = (no: number) => {
+    if (tiklamaModu === 'baslik') onBaslik(no)
+    else if (tiklamaModu === 'ilk') onIlk(no)
+    else onSon(no)
+  }
+  const MODLAR = [
+    { id: 'baslik', etiket: 'Başlık satırı' },
+    { id: 'ilk', etiket: 'İlk veri satırı' },
+    { id: 'son', etiket: 'Son veri satırı' },
+  ] as const
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-4 rounded-xl border border-line bg-surface-soft p-4">
@@ -508,11 +520,29 @@ function AralikAdimi({
           />
           <span className="mt-1 block text-[11px] text-muted-foreground">Boş = sona kadar</span>
         </label>
-        <p className="min-w-[220px] flex-1 text-[12px] leading-5 text-muted-foreground">
-          Tablodaki bir <strong className="text-ink">satır numarasına tıklayarak</strong> o satırı başlık
-          olarak seçebilirsiniz. Başlığın üstündeki satırlar (firma, proje, tarih künyesi) ve aralık
-          dışındaki satırlar aktarılmaz.
-        </p>
+        <div className="min-w-[260px] flex-1">
+          <span className="mb-1 block text-[12px] font-medium text-muted-foreground">Tabloda satıra tıklayınca</span>
+          <div className="inline-flex overflow-hidden rounded-md border border-line bg-white" role="radiogroup" aria-label="Tıklama modu">
+            {MODLAR.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="radio"
+                aria-checked={tiklamaModu === m.id}
+                onClick={() => setTiklamaModu(m.id)}
+                className={`h-9 px-3 text-[12px] font-medium ${
+                  tiklamaModu === m.id ? 'bg-black text-white' : 'text-ink hover:bg-surface-soft'
+                }`}
+              >
+                {m.etiket}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[12px] leading-5 text-muted-foreground">
+            Seçtiğiniz modda tablodaki <strong className="text-ink">herhangi bir satıra tıklayın</strong>. Başlığın
+            üstündeki satırlar (firma, proje, tarih künyesi) ve aralık dışındaki satırlar aktarılmaz.
+          </p>
+        </div>
       </div>
 
       {gecersiz && (
@@ -527,7 +557,8 @@ function AralikAdimi({
         baslikSatiri={ayar.baslikSatiri}
         ilkSatir={ayar.ilkSatir}
         sonSatir={ayar.sonSatir}
-        onSatirTikla={onBaslik}
+        onSatirTikla={satiraTiklandi}
+        tiklamaIpucu={MODLAR.find((m) => m.id === tiklamaModu)?.etiket}
       />
     </div>
   )
@@ -1161,6 +1192,7 @@ function Izgara({
   ilkSatir,
   sonSatir,
   onSatirTikla,
+  tiklamaIpucu,
 }: {
   sayfa: SayfaVerisi
   satirLimiti: number
@@ -1168,6 +1200,8 @@ function Izgara({
   ilkSatir?: number
   sonSatir?: number | null
   onSatirTikla?: (satir: number) => void
+  /** Satıra tıklayınca ne seçileceği (ipucu metni) */
+  tiklamaIpucu?: string
 }) {
   const satirlar = sayfa.satirlar.slice(0, satirLimiti)
   const sutunlar = Math.min(sayfa.sutunSayisi, 14)
@@ -1198,20 +1232,20 @@ function Izgara({
             return (
               <tr
                 key={no}
-                className={
+                onClick={onSatirTikla ? () => onSatirTikla(no) : undefined}
+                className={`${onSatirTikla ? 'cursor-pointer hover:bg-line-faint ' : ''}${
                   baslik
                     ? 'bg-info-soft font-bold'
                     : disinda
                       ? 'bg-surface-muted/60 text-muted-foreground'
                       : 'bg-white'
-                }
+                }`}
               >
                 <td
-                  onClick={onSatirTikla ? () => onSatirTikla(no) : undefined}
                   className={`sticky left-0 z-10 border-r border-b border-line px-2 py-1 text-center font-mono text-[11px] ${
                     baslik ? 'bg-info-soft text-black' : 'bg-surface-muted text-muted-foreground'
                   } ${onSatirTikla ? 'cursor-pointer hover:bg-line-faint' : ''}`}
-                  title={onSatirTikla ? 'Bu satırı başlık yap' : undefined}
+                  title={onSatirTikla && tiklamaIpucu ? `Bu satırı seç: ${tiklamaIpucu}` : undefined}
                 >
                   {no}
                 </td>

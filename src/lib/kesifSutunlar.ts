@@ -1,5 +1,6 @@
 import type { SpreadsheetColumn } from '@ark/ui-kit'
 import type { KesifEkSutun, KesifSatiri } from '../data/types'
+import { baslikMi, levelDegeri } from './kesifSatir'
 
 /**
  * Keşif tablosunun sütun düzeni. Formüller sütun HARFLERİNE değil anahtarlarına göre kurulur:
@@ -15,6 +16,7 @@ export type SabitMaliyetAnahtari = (typeof MALIYET_SUTUNLARI)[number]
 export const ONERILEN_EK_SUTUNLAR: Array<{ baslik: string; tur: KesifEkSutun['tur'] }> = [
   { baslik: 'Nakliye', tur: 'maliyet' },
   { baslik: 'Fittings', tur: 'katsayi' },
+  { baslik: 'İşveren Kodu', tur: 'metin' },
 ]
 
 const SABIT_ONCESI: SpreadsheetColumn[] = [
@@ -33,7 +35,8 @@ const SABIT_MALIYET: SpreadsheetColumn[] = [
 ]
 
 /** Özel sütunları `sonra` bağlantılarına göre sıralayarak maliyet bölgesinin sütun anahtarlarını verir */
-export function maliyetBolgesi(ek: KesifEkSutun[]): string[] {
+export function maliyetBolgesi(tumEk: KesifEkSutun[]): string[] {
+  const ek = tumEk.filter((e) => e.tur !== 'metin')
   const sira: string[] = MALIYET_SUTUNLARI.map((k) => k)
   const bekleyen = [...ek]
   // Her özel sütun, `sonra` sütununun hemen sağına girer (birden çok sütun aynı yere eklendiyse eklenme sırasıyla)
@@ -58,7 +61,10 @@ export function maliyetBolgesi(ek: KesifEkSutun[]): string[] {
 /** Tüm sütun listesi (Detay sayfası) */
 export function kesifSutunlari(ek: KesifEkSutun[] = []): SpreadsheetColumn[] {
   const tanim = new Map<string, SpreadsheetColumn>(SABIT_MALIYET.map((c) => [c.key as string, c]))
-  for (const e of ek) {
+  const metinSutunlari: SpreadsheetColumn[] = ek
+    .filter((e) => e.tur === 'metin')
+    .map((e) => ({ key: e.key, title: e.baslik, width: 140, align: 'left', description: 'Ek metin sütunu (fiyatı etkilemez)' }))
+  for (const e of ek.filter((x) => x.tur !== 'metin')) {
     tanim.set(e.key, {
       key: e.key,
       title: e.baslik,
@@ -69,8 +75,11 @@ export function kesifSutunlari(ek: KesifEkSutun[] = []): SpreadsheetColumn[] {
     })
   }
   const maliyet = maliyetBolgesi(ek).map((k) => tanim.get(k)).filter((c): c is SpreadsheetColumn => !!c)
+  const markaKonumu = SABIT_ONCESI.findIndex((c) => c.key === 'markaModel') + 1
   return [
-    ...SABIT_ONCESI,
+    ...SABIT_ONCESI.slice(0, markaKonumu),
+    ...metinSutunlari,
+    ...SABIT_ONCESI.slice(markaKonumu),
     ...maliyet,
     {
       key: 'birimFiyat',
@@ -149,6 +158,7 @@ export function birimFiyatFormulu(ek: KesifEkSutun[], harf: (key: string) => str
 
 /** Satırın özel sütun değeri; katsayıda boş = 1, maliyette boş = 0 */
 export function ekDeger(satir: KesifSatiri, e: KesifEkSutun): number {
+  if (e.tur === 'metin') return 0
   const v = satir.ekDegerler?.[e.key]
   return typeof v === 'number' && Number.isFinite(v) ? v : e.tur === 'katsayi' ? 1 : 0
 }
@@ -172,4 +182,160 @@ export function yeniEkSutunAnahtari(ek: KesifEkSutun[]): string {
   let n = ek.length + 1
   while (ek.some((e) => e.key === `ek${n}`)) n += 1
   return `ek${n}`
+}
+
+/**
+ * İçe aktarılan özel sütunları mevcut sütunlarla birleştirir: aynı ad + tür varsa mevcut sütun kullanılır, yoksa
+ * yeni anahtarla eklenir. `harita`: gelen anahtar → birleşik anahtar (satır değerlerini taşımak için).
+ */
+export function ekSutunlariBirlestir(
+  mevcut: KesifEkSutun[],
+  gelen: KesifEkSutun[],
+): { birlesik: KesifEkSutun[]; harita: Record<string, string> } {
+  const birlesik = [...mevcut]
+  const harita: Record<string, string> = {}
+  const ad = (x: string) => x.trim().toLocaleLowerCase('tr')
+  for (const g of gelen) {
+    const var_ = birlesik.find((m) => ad(m.baslik) === ad(g.baslik) && m.tur === g.tur)
+    if (var_) {
+      harita[g.key] = var_.key
+      continue
+    }
+    const key = yeniEkSutunAnahtari(birlesik)
+    harita[g.key] = key
+    const sabit = (MALIYET_SUTUNLARI as readonly string[]).includes(g.sonra)
+    birlesik.push({
+      key,
+      baslik: g.baslik,
+      tur: g.tur,
+      sonra: g.tur === 'metin' ? '' : sabit ? g.sonra : (harita[g.sonra] ?? 'ggk'),
+    })
+  }
+  return { birlesik, harita }
+}
+
+/** Başlığın alt ağacındaki kalem satırları (kendinden sonraki, Level'ı daha büyük satırlar; yorumlar hariç) */
+function altKalemler(satirlar: KesifSatiri[], idx: number): KesifSatiri[] {
+  const level = levelDegeri(satirlar[idx])
+  const sonuc: KesifSatiri[] = []
+  for (let j = idx + 1; j < satirlar.length; j += 1) {
+    const s = satirlar[j]
+    if (s.yorum) continue
+    if (levelDegeri(s) <= level) break
+    if (!baslikMi(s)) sonuc.push(s)
+  }
+  return sonuc
+}
+
+/** Dışa aktarılan tablonun backend isteği (`POST /export-table`) */
+export type DisaAktarimIstegi = {
+  title: string
+  extraColumns: Array<{ key: string; title: string; kind: 'cost' | 'factor' | 'text' }>
+  rows: Array<{
+    level?: number
+    comment?: boolean
+    code?: string
+    description?: string
+    brand?: string
+    unit?: string
+    quantity?: number
+    material?: number
+    labor?: number
+    ggk?: number
+    unitPrice?: number
+    total?: number
+    extras?: Record<string, number | string>
+  }>
+}
+
+/** Keşif satırlarını dışa aktarım isteğine çevirir (Poz Kodu, özel sütunlar, başlık toplamları, yorum satırları) */
+export function disaAktarimIstegi(satirlar: KesifSatiri[], ek: KesifEkSutun[], baslik: string): DisaAktarimIstegi {
+  const birimFiyatiOf = (s: KesifSatiri): number | undefined => {
+    const maliyetVar = s.malzeme != null || s.iscilik != null || s.ggk != null || Object.keys(s.ekDegerler ?? {}).length > 0
+    return maliyetVar ? birimFiyatHesapla(s, ek) : s.birimFiyat
+  }
+  const sirali = [
+    ...ek.filter((e) => e.tur === 'metin'),
+    ...maliyetBolgesi(ek)
+      .map((k) => ek.find((e) => e.key === k))
+      .filter((e): e is KesifEkSutun => !!e),
+  ]
+  return {
+    title: baslik,
+    extraColumns: sirali.map((e) => ({
+      key: e.key,
+      title: e.baslik,
+      kind: e.tur === 'maliyet' ? 'cost' : e.tur === 'katsayi' ? 'factor' : 'text',
+    })),
+    rows: satirlar.map((s, i) => {
+      if (s.yorum) return { comment: true, description: s.pozTanimi }
+      if (baslikMi(s)) {
+        const toplam = altKalemler(satirlar, i).reduce((acc, k) => acc + (k.miktar || 0) * (birimFiyatiOf(k) ?? 0), 0)
+        return {
+          level: levelDegeri(s),
+          code: s.kaynakKodu,
+          description: s.pozTanimi,
+          brand: s.markaModel,
+          total: toplam > 0 ? toplam : undefined,
+        }
+      }
+      const bf = birimFiyatiOf(s)
+      return {
+        level: levelDegeri(s),
+        code: s.kaynakKodu,
+        description: s.pozTanimi,
+        brand: s.markaModel,
+        unit: s.birim,
+        quantity: s.miktar,
+        material: s.malzeme,
+        labor: s.iscilik,
+        ggk: s.ggk,
+        unitPrice: bf,
+        total: bf != null ? (s.miktar || 0) * bf : undefined,
+        extras: s.ekDegerler,
+      }
+    }),
+  }
+}
+
+/** Dışa aktarım isteğini (backend erişilemezse yerel dosya için) başlık + satır dizisine çevirir; backend ile aynı düzen */
+export function disaAktarimTablosu(istek: DisaAktarimIstegi): Array<Array<string | number>> {
+  const metin = istek.extraColumns.filter((c) => c.kind === 'text')
+  const sayisal = istek.extraColumns.filter((c) => c.kind !== 'text')
+  const baslik = [
+    'Level',
+    'Poz Kodu',
+    'Poz Tanımı',
+    'Marka / Model',
+    ...metin.map((c) => `${c.title} (metin)`),
+    'Birim',
+    'Miktar',
+    'Malzeme',
+    'İşçilik',
+    'GGK',
+    ...sayisal.map((c) => `${c.title} (${c.kind === 'factor' ? 'katsayı' : 'maliyet'})`),
+    'Birim Fiyat',
+    'Toplam Tutar',
+  ]
+  const deger = (v: unknown): string | number => (typeof v === 'number' || typeof v === 'string' ? v : '')
+  const satirlar = istek.rows.map((r) =>
+    r.comment
+      ? ['C', '', r.description ?? '', ...Array(baslik.length - 3).fill('')]
+      : [
+          deger(r.level),
+          deger(r.code),
+          deger(r.description),
+          deger(r.brand),
+          ...metin.map((c) => deger(r.extras?.[c.key])),
+          deger(r.unit),
+          deger(r.quantity),
+          deger(r.material),
+          deger(r.labor),
+          deger(r.ggk),
+          ...sayisal.map((c) => deger(r.extras?.[c.key])),
+          deger(r.unitPrice),
+          deger(r.total),
+        ],
+  )
+  return [baslik, ...satirlar]
 }

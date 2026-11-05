@@ -59,6 +59,8 @@ export type DogrulamaSatiri = {
   /** Hiyerarşi seviyesi 1–9; verilirse doğrulama seviye modunda çalışır (numara kuralları uygulanmaz) */
   level?: number
   number?: string
+  /** Poz kodu (özgün kod, ör. "AHU 01"); hiyerarşi numarası değildir */
+  code?: string
   description?: string
   unit?: string
   quantity?: number | null
@@ -72,6 +74,7 @@ export type DogrulamaSatiri = {
 export const ALAN_SUTUNU: Record<string, string> = {
   level: 'level',
   number: 'level',
+  code: 'pozKodu',
   description: 'pozTanimi',
   unit: 'birim',
   quantity: 'miktar',
@@ -89,11 +92,12 @@ export function satirlariDogrulamaSatirlarinaCevir(satirlar: KesifSatiri[]): Dog
   // Tabloda Poz No yoktur: hiyerarşi Level'dan okunur, numara gönderilmez (mesajlarda poz tanımı görünür)
   return satirlar.filter((s) => !s.yorum).map((s) => {
     if (s.seviye === 1) {
-      return { id: s.id, level: levelDegeri(s), description: s.pozTanimi }
+      return { id: s.id, level: levelDegeri(s), code: s.kaynakKodu, description: s.pozTanimi }
     }
     return {
       id: s.id,
       level: levelDegeri(s),
+      code: s.kaynakKodu,
       description: s.pozTanimi,
       unit: s.birim,
       // Kalem satırında miktar her zaman gönderilir (0 dahil): backend kalemi "poz" sayar ve E04'ü uygular
@@ -157,6 +161,7 @@ export type DuzeltmeYaniti = {
 export const ALAN_ETIKETI: Record<string, string> = {
   level: 'Level',
   number: 'Poz No',
+  code: 'Poz Kodu',
   description: 'Poz Tanımı',
   unit: 'Birim',
   quantity: 'Miktar',
@@ -200,6 +205,7 @@ export function duzeltmeyiUygula(satirlar: KesifSatiri[], yanit: DuzeltmeYaniti)
       sonuc.push({
         ...m,
         pozNo: r.number ?? m.pozNo,
+        kaynakKodu: r.code ?? m.kaynakKodu,
         level: r.level ?? m.level,
         birim: m.seviye === 1 ? m.birim : (r.unit ?? m.birim),
       })

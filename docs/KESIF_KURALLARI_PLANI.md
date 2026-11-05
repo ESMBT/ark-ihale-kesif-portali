@@ -313,6 +313,33 @@ Kabul: tablo harf kaydırmasına rağmen aynı toplamları verir (mevcut test + 
 - **4.3** Ark.Excel'de özel sütun rolleri (`extraCost`, `factor`): `ColumnMap` şu an rol başına tek sütun tutuyor → çoklu sütun rolü için tasarım gerekir.
 - **4.4 (B13)** Şablon: yeni sütun yapısı (Level, Poz Kodu, Poz Tanımı…), **Kurallar** sayfası (Level 1–9, C = yorum, birim listesi, miktar > 0, poz kodu benzersiz), Birim ve Level için Excel veri doğrulama (dropdown), örnek satırlar. Backend şablon üretici + yerel yedek birlikte güncellenir. *(Faz 0.2'den sonra hemen yapılabilir; S–M.)*
 
+### Uygulama durumu (06.11)
+
+| Madde | Durum |
+|-------|-------|
+| 0.1 anahtar → harf (`lib/kesifSutunlar.ts`) | ✅ |
+| 0.2 Poz Kodu (Level'dan sonra), sihirbaz etiketi | ✅ (dışa aktarma / yerel yedek şablon başlıkları ⏳) |
+| 0.3 Detay / İcmal | ✅ |
+| 0.4 Türkçe etiketler, "Keşfi Kontrol Et" | ✅ portal `labels` ile (ui-kit varsayılanları aksansız kaldı — testler o metinlere bağlı) |
+| 0.5 X (kapat) kontrolü | ⏳ kod hatası değil; küçük ekran doğrulanmadı |
+| 1.1 birim varsa miktar (E04) | ✅ zaten vardı, test eklendi |
+| 1.2 W02 sihirbazda gizli | ✅ zaten hook'ta filtreli |
+| 1.3 E08 / E09 / W05 + "Poz kodlarını doldur" (`fill-codes`) | ✅ — E08 yalnızca tabloda bazı kodlar varken; hiç kod yoksa tek uyarı W05 (demo paketleri yayın kapısında kilitlenmesin) |
+| 2.1 Düzelt'te düzenlenebilir "Yeni" + birim listesi, birim eşanlamlıları | ✅ |
+| 2.2 Önceki / Sonraki sorun | ✅ |
+| 2.3 Aralığı önizlemeden tıklayarak seçme | ⏳ |
+| 3.1 Başlıkta yalnızca toplam tutar | ✅ |
+| 3.2 Birim açılır liste (ui-kit `options`) | ✅ datalist: serbest yazım serbest, tanımsız birim E02 ile işaretlenir |
+| 3.3 Sütun salt-okunur + başlıkta formül (ui-kit `readOnly`, `formulaHint`) | ✅ |
+| 3.4 Özel sütunlar (maliyet / katsayı, "Sütun ekle") | ✅ — kayıt `paket.kesifSutunlari` + `satir.ekDegerler` |
+| 4.1 Poz kodu önek/stil seçeneği arayüzü, İşveren kodu | ⏳ (API `prefix` parametresi hazır; önek mevcut kodlardan sürdürülür) |
+| 4.2 Level değişimi / başlık silme (A grubu) | ✅ önceki turda |
+| 4.3 Ark.Excel'de özel sütun rolleri; dışa aktarmada ek sütunlar | ⏳ |
+| 4.4 Şablon (Level / Poz Kodu, Kurallar sayfası, Level + Birim listeleri) | ✅ `SurveyTemplateBuilder` |
+
+Ek bulgular: Poz No'su boş ama birimi / miktarı olan satır artık yorum sayılmayıp **poz** olur (toplantıdaki "boş numara yorum gibi davranıyor"
+sorununun diğer yüzü). Açık: `Dışa Aktar` hâlâ eski "Sıra No." düzeninde yazar; Poz Kodu ve özel sütunlar dışa aktarılmaz.
+
 ### Karar gerekenler
 
 - **D1** Poz Kodu tabloda elle eklenen satırlarda da düzenlenebilir mi? (Öneri: evet; içe aktarmadan gelen salt-okunur değil.)

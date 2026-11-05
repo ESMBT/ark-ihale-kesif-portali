@@ -6,7 +6,7 @@ import type { KesifSatiri } from '../../data/types'
 import { ALAN_SUTUNU, type DogrulamaDurumu, type DogrulamaSorunu } from '../../lib/kesifDogrulama'
 
 /**
- * "BOQ'u Kontrol Et" şeridi (F2): doğrulama sonucunu tablonun üstünde özetler,
+ * "Keşfi Kontrol Et" şeridi (F2): doğrulama sonucunu tablonun üstünde özetler,
  * sorun listesini açar ve bir soruna tıklayınca tabloda ilgili hücreye götürür.
  * Kurallar backend'dedir; bu bileşen yalnızca gösterir.
  */
@@ -57,6 +57,18 @@ export function DogrulamaSeridi({
       baslik: referans?.fixes.find((f) => f.id === id)?.title ?? id,
     }))
   }, [siraliSorunlar, referans])
+
+  // Önceki / sonraki sorun: sırayla gezilir (satırı olan sorunlar); düzeltilen sorun listeden düşer
+  const gidilebilirler = useMemo(() => siraliSorunlar.filter((s) => s.rowId), [siraliSorunlar])
+  const [imlec, setImlec] = useState(-1)
+  const sorunaGit = (yon: 1 | -1) => {
+    const n = gidilebilirler.length
+    if (n === 0) return
+    const yeni = (((imlec + yon) % n) + n) % n
+    setImlec(yeni)
+    const s = gidilebilirler[yeni]
+    onSatiraGit(s.rowId!, s.field ? ALAN_SUTUNU[s.field] : undefined)
+  }
 
   const duzeltDugmesi = (fixId: string, etiket: string, boyut: 'sm' = 'sm') => (
     <Button
@@ -131,6 +143,16 @@ export function DogrulamaSeridi({
           {aciklama}
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          {gidilebilirler.length > 0 && (
+            <>
+              <Button variant="secondary" size="sm" icon="chevron-up" onClick={() => sorunaGit(-1)} title="Önceki sorunun satırına git">
+                Önceki
+              </Button>
+              <Button variant="secondary" size="sm" icon="chevron-down" onClick={() => sorunaGit(1)} title="Sıradaki sorunun satırına git">
+                Sonraki sorun
+              </Button>
+            </>
+          )}
           {siraliSorunlar.length > 0 && (
             <Button
               variant="secondary"
@@ -143,7 +165,7 @@ export function DogrulamaSeridi({
             </Button>
           )}
           <Button variant="secondary" size="sm" icon="rotate-ccw" disabled={yukleniyor} onClick={yenile}>
-            {yukleniyor ? 'Kontrol ediliyor…' : "BOQ'u Kontrol Et"}
+            {yukleniyor ? 'Kontrol ediliyor…' : 'Keşfi Kontrol Et'}
           </Button>
         </div>
       </div>

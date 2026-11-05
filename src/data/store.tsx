@@ -23,6 +23,7 @@ import type {
   Bildirim,
   IhalePaketi,
   IhaleYonetimi,
+  KesifEkSutun,
   KesifSatiri,
   PaketDurumu,
   Proje,
@@ -117,7 +118,7 @@ type Store = {
     yama: Partial<Pick<IhalePaketi, 'ad' | 'isTipi' | 'alanlar'>>,
   ) => void
   paketDurum: (projeId: string, paketId: string, durum: PaketDurumu) => void
-  keşifGuncelle: (projeId: string, paketId: string, satirlar: KesifSatiri[]) => void
+  keşifGuncelle: (projeId: string, paketId: string, satirlar: KesifSatiri[], ekSutunlar?: KesifEkSutun[]) => void
   belgeEkle: (projeId: string, paketId: string, belge: IhalePaketi['belgeler'][number]) => void
   altYukleniciEkle: (projeId: string, paketId: string, firma: string) => void
   altYukleniciSec: (projeId: string, paketId: string, firma: AltYuklenici) => void
@@ -765,14 +766,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
-  const keşifGuncelle = useCallback((projeId: string, paketId: string, satirlar: KesifSatiri[]) => {
+  const keşifGuncelle = useCallback((projeId: string, paketId: string, satirlar: KesifSatiri[], ekSutunlar?: KesifEkSutun[]) => {
     setProjeler((prev) =>
       prev.map((p) =>
         p.id === projeId
           ? {
               ...p,
               guncellemeTarihi: simdi(),
-              paketler: p.paketler.map((k) => (k.id === paketId ? { ...k, keşif: satirlar } : k)),
+              paketler: p.paketler.map((k) =>
+                k.id === paketId ? { ...k, keşif: satirlar, ...(ekSutunlar ? { kesifSutunlari: ekSutunlar } : {}) } : k,
+              ),
             }
           : p,
       ),

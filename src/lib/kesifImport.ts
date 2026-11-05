@@ -102,10 +102,12 @@ export function anahtarLevelMi(sayfa: SayfaVerisi, ayar: IceAktarAyar, sutun: nu
 export function baslikPozAyrimi(sayfa: SayfaVerisi, ayar: IceAktarAyar): BaslikPozAyrimi {
   const kolon = (rol: string) => ayar.esleme.indexOf(rol)
   // "Level / Poz No" tek rol: sütun türü içerikten çözülür (Ark.Excel ile aynı kural)
-  const anahtar = Math.max(kolon('level'), kolon('code'))
-  const levelSutunu = anahtar >= 0 && anahtarLevelMi(sayfa, ayar, anahtar)
-  const kod = levelSutunu ? -1 : anahtar
-  const level = levelSutunu ? anahtar : -1
+  // "Level / Poz No" ve "Poz Kodu" ayrı sütunlar olabilir: Level sütunu 1–9 / C değilse (Poz No) kod gibi okunur
+  const levelAday = kolon('level')
+  const kodAday = kolon('code')
+  const levelSutunu = levelAday >= 0 && anahtarLevelMi(sayfa, ayar, levelAday)
+  const level = levelSutunu ? levelAday : -1
+  const kod = levelSutunu ? kodAday : levelAday >= 0 ? levelAday : kodAday
   const tanim = kolon('description')
   const birim = kolon('unit')
   const miktar = kolon('quantity')

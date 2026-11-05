@@ -837,7 +837,7 @@ function OnizlemeAdimi({
           <p className="text-[12px] leading-5 text-muted-foreground">
             Dosyada ne varsa (Level, Poz No, Sıra No, etiket) otomatik olarak{' '}
             <strong className="text-ink">Level 1–9</strong>’a çevrilir ve 01 → 01.01 → 01.01.0010 düzeninde yeniden
-            numaralanır; özgün kod “Kaynak Kod” sütununda korunur. Level’ı <strong className="text-ink">C</strong>{' '}
+            numaralanır; özgün kod “Poz Kodu” sütununda korunur. Level’ı <strong className="text-ink">C</strong>{' '}
             olan satırlar açıklama (yorum) satırıdır. Başlık/poz ayrımı Ark.Excel tarafından yapılır: birim veya miktarı olan satırlar{' '}
             <strong className="text-ink">poz</strong>, birim ve miktarı olmayan kodlu satırlar{' '}
             <strong className="text-ink">başlık</strong> (ana grup) olur. <strong className="text-ink">Numarası
@@ -949,7 +949,7 @@ function OnizlemeAdimi({
           <table className="w-full border-collapse text-[12px]">
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-line bg-surface-muted">
-                {['Excel', 'Durum', 'Level', 'Kaynak Kod', 'Başlık', 'Poz Tanımı', 'Birim', 'Miktar', 'Malzeme', 'İşçilik', 'GGK', 'Birim Fiyat', 'Not'].map(
+                {['Excel', 'Durum', 'Level', 'Poz Kodu', 'Başlık', 'Poz Tanımı', 'Birim', 'Miktar', 'Malzeme', 'İşçilik', 'GGK', 'Birim Fiyat', 'Not'].map(
                   (h) => (
                     <th
                       key={h}
@@ -1069,7 +1069,7 @@ function DogrulamaOzeti({
     return (
       <div className="rounded-xl border border-line bg-surface-soft px-4 py-2.5 text-[13px] text-muted-foreground" role="status">
         Aktarılacak satırlar doğrulanamadı ({hata}). İçe aktarma yine de yapılabilir; aktardıktan sonra tabloda
-        “BOQ’u Kontrol Et” ile kontrol edin.
+        “Keşfi Kontrol Et” ile kontrol edin.
       </div>
     )
   }

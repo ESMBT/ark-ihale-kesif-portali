@@ -209,6 +209,8 @@ export type IhalePaketi = {
   /** Seçilen alt yüklenici */
   seciliFirma?: string
   keşif: KesifSatiri[]
+  /** Keşif tablosuna eklenen özel sütunlar (Nakliye, Fittings …) */
+  kesifSutunlari?: KesifEkSutun[]
   belgeler: ProjeBelge[]
   altYukleniciler: AltYuklenici[]
   /** İhale paketi oluşturulurken doldurulan alanlar (alan id → değer) */
@@ -256,6 +258,21 @@ export type KesifSatiri = {
    * Tabloda Poz No yerine Level gösterilir; yorum satırlarında Level "C" yazılır (`yorum`). Boşsa Poz No'dan türetilir.
    */
   level?: number
+  /** Özel sütun değerleri (sütun anahtarı → sayı): "Nakliye" gibi maliyet sütunları, "Fittings" gibi katsayılar */
+  ekDegerler?: Record<string, number>
+}
+
+/**
+ * Keşif tablosuna eklenen özel sütun. `maliyet`: Birim Fiyat toplamına eklenir (ör. Nakliye).
+ * `katsayi`: hemen solundaki sütunu çarpar; Birim Fiyat'ın hemen solundaysa maliyet toplamını çarpar
+ * (ör. Fittings 1,5; boş = 1).
+ */
+export type KesifEkSutun = {
+  key: string
+  baslik: string
+  tur: 'maliyet' | 'katsayi'
+  /** Hangi sütunun sağına yerleştirildiği (Malzeme / İşçilik / GGK ya da başka bir özel sütun) */
+  sonra: string
 }
 
 export type ProjeBelge = {

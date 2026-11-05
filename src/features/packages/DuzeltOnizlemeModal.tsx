@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
@@ -19,6 +19,7 @@ export function DuzeltOnizlemeModal({
   aciklama,
   yanit,
   satirlar,
+  birimler = [],
   onUygula,
   onVazgec,
 }: {
@@ -26,9 +27,33 @@ export function DuzeltOnizlemeModal({
   aciklama?: string
   yanit: DuzeltmeYaniti
   satirlar: KesifSatiri[]
-  onUygula: () => void
+  /** Tanımlı birimler: "Yeni" birim değeri bu listeden seçilebilir */
+  birimler?: string[]
+  /** Kullanıcının düzenlediği değerler uygulanmış yanıtla çağrılır */
+  onUygula: (yanit: DuzeltmeYaniti) => void
   onVazgec: () => void
 }) {
+  // "Yeni" değerler düzenlenebilir: anahtar `${satır}|${alan}` → kullanıcının yazdığı değer
+  const [duzenlenen, setDuzenlenen] = useState<Record<string, string>>({})
+  const anahtar = (rowId: string, alan?: string | null) => `${rowId}|${alan ?? ''}`
+
+  const duzenliYanit = (): DuzeltmeYaniti => {
+    const changes = yanit.changes.map((c) => {
+      const v = c.kind === 'update' && c.field ? duzenlenen[anahtar(c.rowId, c.field)] : undefined
+      return v === undefined ? c : { ...c, to: v }
+    })
+    const rows = yanit.rows.map((r) => {
+      let yeni = r
+      for (const c of changes) {
+        if (c.kind !== 'update' || c.rowId !== r.id || !c.field || duzenlenen[anahtar(c.rowId, c.field)] === undefined) continue
+        const v = duzenlenen[anahtar(c.rowId, c.field)].trim()
+        yeni = { ...yeni, [c.field]: c.field === 'level' ? (v ? Number(v) : undefined) : v || undefined }
+      }
+      return yeni
+    })
+    return { ...yanit, rows, changes }
+  }
+
   const etiketler = useMemo(() => {
     const harita = new Map<string, string>()
     for (const s of satirlar) harita.set(s.id, (s.pozTanimi?.trim() || s.pozNo?.trim() || '—').slice(0, 42))
@@ -56,7 +81,7 @@ export function DuzeltOnizlemeModal({
           <Button variant="ghost" onClick={onVazgec}>
             Vazgeç
           </Button>
-          <Button variant="brand" icon="check" disabled={bos} onClick={onUygula}>
+          <Button variant="brand" icon="check" disabled={bos} onClick={() => onUygula(duzenliYanit())}>
             {bos ? 'Değişecek bir şey yok' : `Uygula (${yanit.changes.length} değişiklik)`}
           </Button>
         </>
@@ -112,16 +137,37 @@ export function DuzeltOnizlemeModal({
                     <td className="px-3 py-1.5 font-mono text-[12px] text-muted-foreground line-through decoration-danger/50">
                       {c.kind === 'add' ? '' : (c.from ?? '(boş)')}
                     </td>
-                    <td className="px-3 py-1.5 font-mono text-[12px] font-bold text-black">{c.to ?? ''}</td>
+                    <td className="px-3 py-1.5">
+                      {c.kind === 'update' && c.field ? (
+                        <input
+                          value={duzenlenen[anahtar(c.rowId, c.field)] ?? c.to ?? ''}
+                          list={c.field === 'unit' && birimler.length > 0 ? 'duzelt-birimler' : undefined}
+                          onChange={(e) =>
+                            setDuzenlenen((d) => ({ ...d, [anahtar(c.rowId, c.field)]: e.target.value }))
+                          }
+                          aria-label={`${ALAN_ETIKETI[c.field] ?? c.field} yeni değeri`}
+                          className="h-8 w-full min-w-[120px] rounded-md border border-line bg-white px-2 font-mono text-[12px] font-bold text-black outline-none focus:border-black focus:ring-2 focus:ring-black/10"
+                        />
+                      ) : (
+                        <span className="font-mono text-[12px] font-bold text-black">{c.to ?? ''}</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+        {birimler.length > 0 && (
+          <datalist id="duzelt-birimler">
+            {birimler.map((b) => (
+              <option key={b} value={b} />
+            ))}
+          </datalist>
+        )}
 
         <p className="text-[12px] leading-5 text-muted-foreground">
-          Onayladıktan sonra değişiklikler tabloya uygulanır ve tablo yeniden doğrulanır. Kaydet’e basana kadar
+          “Yeni” değerleri uygulamadan önce düzenleyebilirsiniz (birim için listeden seçin). Onayladıktan sonra değişiklikler tabloya uygulanır ve tablo yeniden doğrulanır. Kaydet’e basana kadar
           kaydedilmez; uygulama sonrası “Geri al” ile döndürebilirsiniz.
         </p>
       </div>

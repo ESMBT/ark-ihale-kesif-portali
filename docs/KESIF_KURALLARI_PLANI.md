@@ -121,6 +121,10 @@ veya kural kodu). Onayınız gerekenler işaretli.
 | 15 | `V` gibi en üst satır dosyada yok (SAP: `V.1.`, `V.2.` …) | Eksik üst başlık **`01` kök satırı** olur; açıklaması keşfin başlığından (disiplin → belge → proje → sayfa adı) gelir ve sihirbazda düzenlenebilir. Bu, E05 (`V` eksik) sorununu da ortadan kaldırır | ☐ |
 | 16 | Numarası olmayan satırlar (çok satırlı açıklamalar, notlar) tabloda görünmüyordu | **Yorum / devam satırı** (`KesifSatiri.yorum`): kaynak konumunda, önceki satırın devamı olarak ayrı satır (soluk + italik). Poz sayılmaz, numaralanmaz, doğrulanmaz, toplamlara girmez. Tabloda **"Yorum satırı ekle"** ile eklenir; poz silinince devam satırları da silinir; dışa aktarımda not olarak yazılır | ☐ |
 | 17 | Otomatik numaralanmış bölümde hem pozlar (`01.07.0010`) hem alt başlıklar (`01.07.01`) var → E06 yanlış pozitifi | **Kardeş sıralaması türüne göre ayrı** (başlık / poz); *Yeniden numarala* da aynı grupları kullanır | ☐ |
+| 18 | **Poz No kullanılmayacak; yerine Level** (1–9 = numaradaki nokta sayısı + 1: `01` → 1, `01.02` → 2, `01.02.01` → 3). Yorum satırı = Level `C` | Tabloda ilk sütun **Level**; Poz No gösterilmez. Hiyerarşi Level'dan okunur; numaralar (01, 01.01, 01.01.0010) kayıt/dışa aktarımda sıradan ve Level'lardan otomatik üretilir. Level hücresine `C` yazmak satırı yorum yapar (sayı yazmak başlığa çevirir; geçersiz değer eski haline döner). İçe aktarmada `Level` sütunu bir rol: Kod sütunu gerekmez, `C` satırları önceki satırın devamı olur | ☐ |
+| 19 | Sol şerit satır numaraları her satırda | Yorum (`C`) satırlarında **numara gösterilmez**; diğer satırlarda gerçek tablo satır numarası kalır (formül adresleriyle tutarlı). "Poz" = Level'ı olan satır (başlık + kalem); yalnızca kalemlerde istenirse tek satırlık değişiklik | ☐ |
+| 20 | Aç/kapa yalnızca ana gruplardaydı | **Seviye tabanlı:** alt ağacı olan her satır (başlık ya da poz) kapanır; poz kapanınca devam (`C`) satırları gizlenir. "Bölümleri kapat/aç" tüm seviyeleri etkiler | ☐ |
+| 21 | Seviye kuralları | **E05 (Level modu):** bir satır bir öncekinden en fazla 1 derin olabilir (1 → 3 atlanamaz); düzeltme = eksik seviyeler için başlık ekler. **E07:** Level 1–9 olmalı. Level modunda E01/E06 (numara) uygulanmaz. Her başlığın alt toplamı yalnızca kalemleri toplar (iç içe başlıklar çift sayılmaz) | ☐ |
 | 9 | Başlık seviyeleri portalda "ana grup"a düzleşiyor | Açık: iç içe başlık hiyerarşisi (ve iç içe aç/kapa) istenecek mi? | ☐ |
 
 ---
@@ -147,6 +151,9 @@ Akış: **Dosya → Aralık → Sütun Eşleme → Önizleme.** Ayrıştırma Ar
 - [x] **Otomatik numaralandırma + kök satır + yorum/devam satırları** (§3 #14–#16): backend `SurveyAutoNumbering`,
   `autoNumber` / `rootTitle` sorguları, `SourceCode`/`IsGenerated`; arayüzde sihirbaz seçenekleri, tabloda `note` satır türü
   (ui-kit), "Kaynak Kod" sütunu, "Yorum satırı ekle".
+- [x] **Level modeli** (§3 #18–#21): backend `Level` rolü + seviye hesabı (`SurveySection.Level`, `SurveyItem.Level`), E05/E07
+  level modu; ui-kit `SpreadsheetRow.level` (seviye tabanlı aç/kapa) ve `hideRowNumber`; portalda Level sütunu, `C` ile yorum,
+  alt toplamlar, Level'dan türetilen numara, şablon/dışa aktarım (Level + `C`).
 - Desteklenmeyen: ConWize'ın **`Matrix BOQ`** sayfası (bina başına miktar sütunları); yalnızca `BOQ` sayfası okunur.
 - [ ] Eşlemeyi sonraki içe aktarma için hatırlama (başlık imzasına göre).
 - [ ] Başlık satırı değişince eşlemenin yeniden önerilmesi (backend'e `suggest` çağrısı).

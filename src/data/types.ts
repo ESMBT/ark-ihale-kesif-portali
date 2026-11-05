@@ -251,6 +251,11 @@ export type KesifSatiri = {
   yorum?: boolean
   /** İçe aktarmada otomatik numaralandırılmadan önceki özgün kod (ör. "AHU 01", "V.1.") */
   kaynakKodu?: string
+  /**
+   * Hiyerarşi seviyesi 1–9: numaradaki nokta sayısı + 1 ("01" → 1, "01.02" → 2, "01.02.01" → 3).
+   * Tabloda Poz No yerine Level gösterilir; yorum satırlarında Level "C" yazılır (`yorum`). Boşsa Poz No'dan türetilir.
+   */
+  level?: number
 }
 
 export type ProjeBelge = {

@@ -37,7 +37,7 @@ export function DogrulamaSeridi({
   )
   const satirEtiketi = useMemo(() => {
     const harita = new Map<string, string>()
-    for (const s of satirlar) harita.set(s.id, s.pozNo?.trim() || s.pozTanimi?.trim() || '—')
+    for (const s of satirlar) harita.set(s.id, (s.pozTanimi?.trim() || s.pozNo?.trim() || '—').slice(0, 42))
     return harita
   }, [satirlar])
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SpreadsheetCellMark } from '@ark/ui-kit'
 import type { KesifSatiri } from '../data/types'
+import { levelDegeri } from './kesifSatir'
 
 /* ------------------------------------------------------------------ *
  * Keşif doğrulama istemcisi (F1)
@@ -55,6 +56,8 @@ export type DogrulamaReferansi = {
 /** Backend'in satır modeli (SurveyValidationRow) */
 export type DogrulamaSatiri = {
   id: string
+  /** Hiyerarşi seviyesi 1–9; verilirse doğrulama seviye modunda çalışır (numara kuralları uygulanmaz) */
+  level?: number
   number?: string
   description?: string
   unit?: string
@@ -67,7 +70,8 @@ export type DogrulamaSatiri = {
 
 /** Doğrulama alanı → Spreadsheet sütun anahtarı */
 export const ALAN_SUTUNU: Record<string, string> = {
-  number: 'pozNo',
+  level: 'level',
+  number: 'level',
   description: 'pozTanimi',
   unit: 'birim',
   quantity: 'miktar',
@@ -82,13 +86,14 @@ export const KESIF_ASAMASINDA_YOKSAYILAN_KODLAR = ['W02'] as const
 /** KesifSatiri[] → backend satır modeli. Başlıklar (seviye 1) birim/miktarsız gönderilir. */
 export function satirlariDogrulamaSatirlarinaCevir(satirlar: KesifSatiri[]): DogrulamaSatiri[] {
   // Yorum / devam satırları poz değildir; doğrulamaya girmez
+  // Tabloda Poz No yoktur: hiyerarşi Level'dan okunur, numara gönderilmez (mesajlarda poz tanımı görünür)
   return satirlar.filter((s) => !s.yorum).map((s) => {
     if (s.seviye === 1) {
-      return { id: s.id, number: s.pozNo, description: s.pozTanimi }
+      return { id: s.id, level: levelDegeri(s), description: s.pozTanimi }
     }
     return {
       id: s.id,
-      number: s.pozNo,
+      level: levelDegeri(s),
       description: s.pozTanimi,
       unit: s.birim,
       // Kalem satırında miktar her zaman gönderilir (0 dahil): backend kalemi "poz" sayar ve E04'ü uygular
@@ -150,6 +155,7 @@ export type DuzeltmeYaniti = {
 
 /** Alan adlarının ekrandaki karşılığı (önizleme modalı) */
 export const ALAN_ETIKETI: Record<string, string> = {
+  level: 'Level',
   number: 'Poz No',
   description: 'Poz Tanımı',
   unit: 'Birim',
@@ -194,6 +200,7 @@ export function duzeltmeyiUygula(satirlar: KesifSatiri[], yanit: DuzeltmeYaniti)
       sonuc.push({
         ...m,
         pozNo: r.number ?? m.pozNo,
+        level: r.level ?? m.level,
         birim: m.seviye === 1 ? m.birim : (r.unit ?? m.birim),
       })
     } else {
@@ -201,6 +208,7 @@ export function duzeltmeyiUygula(satirlar: KesifSatiri[], yanit: DuzeltmeYaniti)
       sonuc.push({
         id: `new-${r.id}-${ek}`,
         seviye: 1,
+        level: r.level ?? undefined,
         pozNo: r.number ?? '',
         pozTanimi: r.description ?? 'BAŞLIK',
         birim: '',

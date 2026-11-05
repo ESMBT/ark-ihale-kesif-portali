@@ -80,6 +80,7 @@ export type BaslikPozAyrimi = {
 export function baslikPozAyrimi(sayfa: SayfaVerisi, ayar: IceAktarAyar): BaslikPozAyrimi {
   const kolon = (rol: string) => ayar.esleme.indexOf(rol)
   const kod = kolon('code')
+  const level = kolon('level')
   const tanim = kolon('description')
   const birim = kolon('unit')
   const miktar = kolon('quantity')
@@ -93,10 +94,15 @@ export function baslikPozAyrimi(sayfa: SayfaVerisi, ayar: IceAktarAyar): BaslikP
     const no = kod >= 0 ? hucreMetin(satir[kod]) : ''
     if (!metin && !no) continue
     if (TOPLAM_ETIKETI.test(no)) continue
+    // Level sütunu varsa: "C" yorum, boş Level önceki satırın devamıdır; ikisi de ne başlık ne poz
+    if (level >= 0) {
+      const lv = hucreMetin(satir[level])
+      if (!/^\d+$/.test(lv)) continue
+    }
     const birimVar = birim >= 0 && !hucreBos(satir[birim])
     const miktarVar = miktar >= 0 && !hucreBos(satir[miktar])
     // Numarası olmayan satırlar Ark.Excel'de açıklama notudur; ne başlık ne poz.
-    if (kod >= 0 && !no) continue
+    if (level < 0 && kod >= 0 && !no) continue
     const baslikMi = !birimVar && !miktarVar
     const hedef = baslikMi ? sonuc.baslikOrnekleri : sonuc.pozOrnekleri
     if (baslikMi) sonuc.baslikSayisi++

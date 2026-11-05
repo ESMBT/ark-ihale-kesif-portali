@@ -132,8 +132,13 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
     const sayac = new Map<string, number>()
     for (const r of ayar?.esleme ?? []) if (r) sayac.set(r, (sayac.get(r) ?? 0) + 1)
     const etiket = (k: string) => roller.find((r) => r.key === k)?.label ?? k
+    // Hiyerarşi için Level ya da Kod sütunlarından en az biri eşlenmelidir
+    const hiyerarsiYok = !sayac.has('level') && !sayac.has('code')
     return {
-      eksik: roller.filter((r) => r.required && !sayac.has(r.key)).map((r) => r.label),
+      eksik: [
+        ...(hiyerarsiYok ? ['Level (ya da Kod)'] : []),
+        ...roller.filter((r) => r.required && !sayac.has(r.key)).map((r) => r.label),
+      ],
       tekrar: [...sayac.entries()].filter(([, n]) => n > 1).map(([k]) => k),
       tekrarEtiketleri: [...sayac.entries()].filter(([, n]) => n > 1).map(([k]) => etiket(k)),
     }
@@ -851,7 +856,9 @@ function OnizlemeAdimi({
           </div>
 
           <p className="text-[12px] leading-5 text-muted-foreground">
-            Başlık/poz ayrımı Ark.Excel tarafından yapılır: birim veya miktarı olan satırlar{' '}
+            Hiyerarşi <strong className="text-ink">Level</strong> ile (1–9; numaradaki nokta sayısı + 1) belirlenir; Level
+            sütunu yoksa kodlardan türetilir. Level’ı <strong className="text-ink">C</strong> olan satırlar açıklama
+            (yorum) satırıdır. Başlık/poz ayrımı Ark.Excel tarafından yapılır: birim veya miktarı olan satırlar{' '}
             <strong className="text-ink">poz</strong>, birim ve miktarı olmayan kodlu satırlar{' '}
             <strong className="text-ink">başlık</strong> (ana grup) olur. <strong className="text-ink">Numarası
             olmayan satırlar</strong> (çok satırlı açıklamalar, notlar) önceki satırın devamı olarak ayrı
@@ -962,7 +969,7 @@ function OnizlemeAdimi({
           <table className="w-full border-collapse text-[12px]">
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-line bg-surface-muted">
-                {['Excel', 'Durum', 'Poz No', 'Kaynak Kod', 'Başlık', 'Poz Tanımı', 'Birim', 'Miktar', 'Malzeme', 'İşçilik', 'GGK', 'Birim Fiyat', 'Not'].map(
+                {['Excel', 'Durum', 'Level', 'Kaynak Kod', 'Başlık', 'Poz Tanımı', 'Birim', 'Miktar', 'Malzeme', 'İşçilik', 'GGK', 'Birim Fiyat', 'Not'].map(
                   (h) => (
                     <th
                       key={h}
@@ -1001,7 +1008,7 @@ function OnizlemeAdimi({
                         {o.durum === 'uyari' ? 'Uyarı' : 'Tamam'}
                       </span>
                     </td>
-                    <td className="px-2.5 py-1.5 font-mono whitespace-nowrap">{s.pozNo}</td>
+                    <td className="px-2.5 py-1.5 font-mono whitespace-nowrap">{yorum ? 'C' : (s.level ?? '')}</td>
                     <td className="px-2.5 py-1.5 font-mono whitespace-nowrap text-muted-foreground">{s.kaynakKodu ?? ''}</td>
                     <td className="max-w-[240px] truncate px-2.5 py-1.5" title={grup ? s.pozTanimi : undefined}>
                       {grup ? s.pozTanimi : ''}
@@ -1074,7 +1081,7 @@ function DogrulamaOzeti({
   const { sonuc, guncel, hata } = durum
   const etiket = useMemo(() => {
     const harita = new Map<string, string>()
-    for (const s of satirlar) harita.set(s.id, s.pozNo?.trim() || s.pozTanimi?.trim() || '—')
+    for (const s of satirlar) harita.set(s.id, (s.pozTanimi?.trim() || s.pozNo?.trim() || '—').slice(0, 42))
     return harita
   }, [satirlar])
 

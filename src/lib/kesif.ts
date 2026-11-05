@@ -1,8 +1,9 @@
 import * as XLSX from 'xlsx'
 import type { KesifSatiri } from '../data/types'
+import { levelDegeri } from './kesifSatir'
 
 export const KESIF_SABLON_BASLIKLARI = [
-  'Poz No',
+  'Level',
   'Poz Tanımı',
   'Açıklama',
   'Birim',
@@ -67,6 +68,8 @@ export type SurveyItemDto = {
   notes: SurveyNoteDto[]
   /** Dosyadaki özgün kod (otomatik numaralandırmada Code yeniden yazılırsa) */
   sourceCode?: string | null
+  /** Hiyerarşi seviyesi 1–9 (numaradaki nokta sayısı + 1) */
+  level?: number | null
 }
 
 export type SurveySectionDto = {
@@ -81,6 +84,8 @@ export type SurveySectionDto = {
   sourceCode?: string | null
   /** Dosyada satırı olmayan, otomatik numaralandırmada üretilen bölüm (ör. kök "01") */
   isGenerated?: boolean
+  /** Hiyerarşi seviyesi 1–9 (numaradaki nokta sayısı + 1) */
+  level?: number | null
 }
 
 export type SurveyDocumentDto = {
@@ -173,6 +178,7 @@ export function surveyDocumentToKaynakliSatirlar(doc: SurveyDocumentDto): Kaynak
           teklifKirilimi: 'Malzeme + İşçilik',
           markaModel: section.brands?.trim() || undefined,
           kaynakKodu: kaynakKodu(section.sourceCode, pozNo),
+          level: section.level ?? undefined,
         },
       })
       for (const n of notlar(section.notes)) satirlar.push(yorum(n.text, n.sourceRow))
@@ -238,6 +244,7 @@ export function surveyDocumentToKaynakliSatirlar(doc: SurveyDocumentDto): Kaynak
           birimFiyat,
           markaModel: item.brands?.trim() || undefined,
           kaynakKodu: kaynakKodu(item.sourceCode, pozNo),
+          level: item.level ?? undefined,
         },
       })
 
@@ -382,8 +389,9 @@ export async function kesifSablonuIndir() {
     // Backend erişilemezse yerel şablon üretimine düş
   }
 
+  // Level: 1–9 (numaradaki nokta sayısı + 1); "C" = açıklama (yorum) satırı
   const ornekSatir = [
-    '01',
+    1,
     'KABA YAPI İŞLERİ',
     '',
     '',
@@ -396,7 +404,7 @@ export async function kesifSablonuIndir() {
     '',
   ]
   const ornekSatir2 = [
-    '01.02',
+    2,
     '2 CM MERMER ZEMİN KAPLAMASI',
     'Zemin kaplaması ve teslim',
     'm²',
@@ -409,7 +417,9 @@ export async function kesifSablonuIndir() {
     '',
   ]
 
-  const ws = XLSX.utils.aoa_to_sheet([[...KESIF_SABLON_BASLIKLARI], ornekSatir, ornekSatir2])
+  const ornekYorum = ['C', 'Cilalı, arka yüz epoksi fileli — önceki satırın devamı (açıklama)', '', '', '', '', '', '', '', '', '']
+
+  const ws = XLSX.utils.aoa_to_sheet([[...KESIF_SABLON_BASLIKLARI], ornekSatir, ornekSatir2, ornekYorum])
 
   ws['!cols'] = [...KESIF_SABLON_BASLIKLARI].map((b) => ({
     wch: b === 'Poz Tanımı' ? 42 : b === 'Açıklama' ? 28 : 18,
@@ -722,9 +732,9 @@ export async function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string)
 
   const veri = satirlar.map((s) =>
     s.yorum
-      ? ['', s.pozTanimi, '', '', '', '', '', '', '', '', '']
+      ? ['C', s.pozTanimi, '', '', '', '', '', '', '', '', '']
       : [
-    s.pozNo,
+    levelDegeri(s),
     s.pozTanimi,
     s.aciklama ?? '',
     s.birim,

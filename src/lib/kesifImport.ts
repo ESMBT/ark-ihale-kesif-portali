@@ -31,8 +31,6 @@ export type IceAktarAyar = {
   sonSatir: number | null
   esleme: Esleme
   birimNormalize: boolean
-  /** Bölüm ve pozları otomatik numaralandır (01, 01.01, 01.01.0010); özgün kodlar "Kaynak Kod"da korunur */
-  otomatikNumara: boolean
   /** Otomatik numaralandırmada üretilen kök satırın (01) açıklaması; boşsa keşif başlığı */
   kokBasligi: string
 }
@@ -73,14 +71,41 @@ export type BaslikPozAyrimi = {
 }
 
 /**
+ * Anahtar sütun Level mi (1–9 / "C"), yoksa Poz No / kod mu? Boş olmayan her değer 1–9 ya da "C" ise ve
+ * ("C" var, değer tekrar ediyor ya da başlık Level/Seviye ise) Level'dır; sıralı "1, 2, 3" sıra numarası değildir.
+ */
+export function anahtarLevelMi(sayfa: SayfaVerisi, ayar: IceAktarAyar, sutun: number): boolean {
+  const son = Math.min(ayar.sonSatir ?? sayfa.satirlar.length, sayfa.satirlar.length)
+  const gorulen = new Set<string>()
+  let adet = 0
+  let yorum = false
+  let tekrar = false
+  for (let r = ayar.ilkSatir; r <= son; r++) {
+    const deger = hucreMetin(sayfa.satirlar[r - 1]?.[sutun]).toLowerCase()
+    if (!deger) continue
+    if (deger === 'c') yorum = true
+    else if (!/^[1-9]$/.test(deger)) return false
+    adet++
+    if (gorulen.has(deger)) tekrar = true
+    gorulen.add(deger)
+  }
+  if (adet === 0) return false
+  const baslik = ayar.baslikSatiri > 0 ? hucreMetin(sayfa.satirlar[ayar.baslikSatiri - 1]?.[sutun]).toLowerCase() : ''
+  return yorum || tekrar || /^(level|seviye|lvl)$/.test(baslik)
+}
+
+/**
  * Sütun eşleme adımı için TAHMİNİ başlık/poz ayrımı. Kural, Ark.Excel'in kuralıyla aynıdır:
  * numarası/tanımı olup birim VE miktarı boş olan satır "başlık", diğeri "poz"tur.
  * Kesin sonuç son adımda backend'den gelir; bu yalnızca eşleme sırasında fikir vermek içindir.
  */
 export function baslikPozAyrimi(sayfa: SayfaVerisi, ayar: IceAktarAyar): BaslikPozAyrimi {
   const kolon = (rol: string) => ayar.esleme.indexOf(rol)
-  const kod = kolon('code')
-  const level = kolon('level')
+  // "Level / Poz No" tek rol: sütun türü içerikten çözülür (Ark.Excel ile aynı kural)
+  const anahtar = Math.max(kolon('level'), kolon('code'))
+  const levelSutunu = anahtar >= 0 && anahtarLevelMi(sayfa, ayar, anahtar)
+  const kod = levelSutunu ? -1 : anahtar
+  const level = levelSutunu ? anahtar : -1
   const tanim = kolon('description')
   const birim = kolon('unit')
   const miktar = kolon('quantity')

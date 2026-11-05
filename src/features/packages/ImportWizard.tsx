@@ -51,7 +51,6 @@ function baslangicAyari(onizleme: SurveyWorkbookPreview, sayfa: SayfaVerisi): Ic
     sonSatir: null,
     esleme: eslemeOnerisi(ham?.suggestedColumnMap ?? {}, sayfa.sutunSayisi),
     birimNormalize: true,
-    otomatikNumara: true,
     kokBasligi: '',
   }
 }
@@ -132,13 +131,9 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
     const sayac = new Map<string, number>()
     for (const r of ayar?.esleme ?? []) if (r) sayac.set(r, (sayac.get(r) ?? 0) + 1)
     const etiket = (k: string) => roller.find((r) => r.key === k)?.label ?? k
-    // Hiyerarşi için Level ya da Kod sütunlarından en az biri eşlenmelidir
-    const hiyerarsiYok = !sayac.has('level') && !sayac.has('code')
+    // Level / Poz No sütunu isteğe bağlıdır; ne gelirse Level'a çevrilir (sütun türü içerikten çözülür)
     return {
-      eksik: [
-        ...(hiyerarsiYok ? ['Level (ya da Kod)'] : []),
-        ...roller.filter((r) => r.required && !sayac.has(r.key)).map((r) => r.label),
-      ],
+      eksik: roller.filter((r) => r.required && !sayac.has(r.key)).map((r) => r.label),
       tekrar: [...sayac.entries()].filter(([, n]) => n > 1).map(([k]) => k),
       tekrarEtiketleri: [...sayac.entries()].filter(([, n]) => n > 1).map(([k]) => etiket(k)),
     }
@@ -170,7 +165,6 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
         firstDataRow: ayarKaynagi.ilkSatir,
         lastDataRow: ayarKaynagi.sonSatir,
         columnMap: eslemeSorgusu(ayarKaynagi.esleme),
-        autoNumber: ayarKaynagi.otomatikNumara,
         rootTitle: ayarKaynagi.kokBasligi,
       })
       setBelge(b)
@@ -814,22 +808,7 @@ function OnizlemeAdimi({
           </label>
 
           <div className="space-y-2 border-t border-line pt-3">
-            <label className="flex cursor-pointer items-start gap-2.5 text-[13px] text-black">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 accent-black"
-                checked={ayar.otomatikNumara}
-                onChange={(e) => onYenidenGetir({ otomatikNumara: e.target.checked })}
-              />
-              <span>
-                Bölüm ve pozları otomatik numaralandır
-                <span className="block text-[12px] text-muted-foreground">
-                  01 → 01.01 → 01.01.0010 düzeninde yeniden numaralanır. Dosyadaki numaralar yalnızca bölüm
-                  hiyerarşisini anlamak için kullanılır; özgün kod “Kaynak Kod” sütununda korunur.
-                </span>
-              </span>
-            </label>
-            {ayar.otomatikNumara && belge?.sections.some((b) => b.isGenerated) && (
+            {belge?.sections.some((b) => b.isGenerated) && (
               <label className="block">
                 <span className="mb-1 block text-[12px] font-medium text-muted-foreground">
                   Üst satır (01) açıklaması
@@ -856,9 +835,10 @@ function OnizlemeAdimi({
           </div>
 
           <p className="text-[12px] leading-5 text-muted-foreground">
-            Hiyerarşi <strong className="text-ink">Level</strong> ile (1–9; numaradaki nokta sayısı + 1) belirlenir; Level
-            sütunu yoksa kodlardan türetilir. Level’ı <strong className="text-ink">C</strong> olan satırlar açıklama
-            (yorum) satırıdır. Başlık/poz ayrımı Ark.Excel tarafından yapılır: birim veya miktarı olan satırlar{' '}
+            Dosyada ne varsa (Level, Poz No, Sıra No, etiket) otomatik olarak{' '}
+            <strong className="text-ink">Level 1–9</strong>’a çevrilir ve 01 → 01.01 → 01.01.0010 düzeninde yeniden
+            numaralanır; özgün kod “Kaynak Kod” sütununda korunur. Level’ı <strong className="text-ink">C</strong>{' '}
+            olan satırlar açıklama (yorum) satırıdır. Başlık/poz ayrımı Ark.Excel tarafından yapılır: birim veya miktarı olan satırlar{' '}
             <strong className="text-ink">poz</strong>, birim ve miktarı olmayan kodlu satırlar{' '}
             <strong className="text-ink">başlık</strong> (ana grup) olur. <strong className="text-ink">Numarası
             olmayan satırlar</strong> (çok satırlı açıklamalar, notlar) önceki satırın devamı olarak ayrı

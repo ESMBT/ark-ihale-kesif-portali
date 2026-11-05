@@ -535,7 +535,8 @@ export function kesifEslemeIleIceAktar(
   q.set('firstDataRow', String(opts.firstDataRow))
   if (opts.lastDataRow != null) q.set('lastDataRow', String(opts.lastDataRow))
   if (opts.columnMap) q.set('columnMap', opts.columnMap)
-  if (opts.autoNumber) q.set('autoNumber', 'true')
+  // Ne gelirse Level'a çevrilir ve otomatik numaralanır; yalnızca açıkça false verilirse kapatılır
+  q.set('autoNumber', opts.autoNumber === false ? 'false' : 'true')
   if (opts.rootTitle?.trim()) q.set('rootTitle', opts.rootTitle.trim())
   return excelIstegi<SurveyDocumentDto>(`/import?${q.toString()}`, file)
 }

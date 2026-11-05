@@ -1,25 +1,272 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  Spreadsheet,
+  type SpreadsheetCellValue,
+  type SpreadsheetChange,
+  type SpreadsheetColumn,
+  type SpreadsheetRow,
+  type SpreadsheetRowCommand,
+  type SpreadsheetSheet,
+} from '@ark/ui-kit'
+import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { Icon } from '../../components/ui/Icon'
 import { LabeledFilter } from '../../components/ui/FilterBar'
-import { Modal } from '../../components/ui/Modal'
-import { IconButton } from '../../components/ui/Shell'
+import { Icon } from '../../components/ui/Icon'
 import type { IhalePaketi, KesifSatiri } from '../../data/types'
+import { kesifDisaAktar, kesifSablonuIndir } from '../../lib/kesif'
 import {
-  KESIF_SABLON_BASLIKLARI,
-  kesifDisaAktar,
-  kesifDosyasiOku,
-  kesifSablonuIndir,
-  type ImportHatasi,
-} from '../../lib/kesif'
+  duzeltmeyiUygula,
+  kesifDuzelt,
+  sorunlardanHucreIsaretleri,
+  useKesifDogrulama,
+  type DuzeltmeYaniti,
+} from '../../lib/kesifDogrulama'
+import type { AktarimModu } from '../../lib/kesifImport'
+import { DogrulamaSeridi } from './DogrulamaSeridi'
+import { DuzeltOnizlemeModal } from './DuzeltOnizlemeModal'
+import { ImportWizard } from './ImportWizard'
+
+const KESIF_SUTUNLARI: SpreadsheetColumn[] = [
+  { key: 'pozNo', title: 'Poz No', width: 100, align: 'left' },
+  { key: 'pozTanimi', title: 'Poz Tanımı', width: 340, align: 'left' },
+  { key: 'markaModel', title: 'Marka / Model', width: 150, align: 'left' },
+  { key: 'birim', title: 'Birim', width: 84, align: 'center' },
+  { key: 'miktar', title: 'Miktar', width: 116, align: 'right', format: 'number' },
+  { key: 'malzeme', title: 'Malzeme', width: 120, align: 'right', format: 'number' },
+  { key: 'iscilik', title: 'İşçilik', width: 120, align: 'right', format: 'number' },
+  { key: 'ggk', title: 'GGK', width: 120, align: 'right', format: 'number' },
+  { key: 'birimFiyat', title: 'Birim Fiyat', width: 128, align: 'right', format: 'number' },
+  { key: 'toplam', title: 'Toplam Tutar', width: 144, align: 'right', format: 'number' },
+]
+
+const OZET_SUTUNLARI: SpreadsheetColumn[] = [
+  { key: 'kod', title: 'Bölüm Kodu', width: 120, align: 'left' },
+  { key: 'baslik', title: 'Bölüm Başlığı', width: 360, align: 'left' },
+  { key: 'marka', title: 'Markalar', width: 180, align: 'left' },
+  { key: 'kalemSayisi', title: 'Kalem Sayısı', width: 130, align: 'right', format: 'integer' },
+  { key: 'toplamMiktar', title: 'Toplam Miktar', width: 150, align: 'right', format: 'number' },
+  { key: 'toplamTutar', title: 'Bölüm Tutarı', width: 160, align: 'right', format: 'number' },
+]
+
+function hucreHamDeger(cell: SpreadsheetCellValue | undefined): string | number {
+  if (cell === undefined) return ''
+  if (typeof cell === 'object' && cell !== null && 'raw' in cell) {
+    return cell.raw
+  }
+  return cell
+}
+
+function kesifSheetsOlustur(satirlar: KesifSatiri[], goster: string): SpreadsheetSheet[] {
+  const gorunen =
+    goster === 'Sadece ana gruplar'
+      ? satirlar.filter((s) => s.seviye === 1)
+      : goster === 'Sadece kalemler'
+        ? satirlar.filter((s) => s.seviye !== 1)
+        : satirlar
+
+  // Her ana grubun tüm listedeki alt kalemlerini önceden hesapla ("Sadece ana gruplar" görünümü için)
+  const grupAltKalemleri = new Map<string, KesifSatiri[]>()
+  let aktifGrupId: string | null = null
+  for (const s of satirlar) {
+    if (s.seviye === 1) {
+      aktifGrupId = s.id
+      grupAltKalemleri.set(s.id, [])
+    } else if (aktifGrupId) {
+      grupAltKalemleri.get(aktifGrupId)?.push(s)
+    }
+  }
+
+  const kalemAraliklari: Array<{ baslangic: number; bitis: number }> = []
+  const ozetGruplari: Array<{
+    id: string
+    kod: string
+    baslik: string
+    marka: string
+    grupExcelRow: number
+    ilkKalemRow: number | null
+    sonKalemRow: number | null
+    altKalemSayisi: number
+  }> = []
+
+  const kesifRows: SpreadsheetRow[] = gorunen.map((s, idx) => {
+    const excelRow = idx + 2
+
+    if (s.seviye === 1) {
+      let sonIndex = idx
+      while (sonIndex + 1 < gorunen.length && gorunen[sonIndex + 1].seviye !== 1) {
+        sonIndex += 1
+      }
+      const gorunenAltKalemSayisi = sonIndex - idx
+      const ilkKalemRow = gorunenAltKalemSayisi > 0 ? idx + 3 : null
+      const sonKalemRow = gorunenAltKalemSayisi > 0 ? sonIndex + 2 : null
+
+      if (ilkKalemRow !== null && sonKalemRow !== null) {
+        kalemAraliklari.push({ baslangic: ilkKalemRow, bitis: sonKalemRow })
+      }
+
+      const tumAltKalemler = grupAltKalemleri.get(s.id) ?? []
+      const gizliMiktarToplam = tumAltKalemler.reduce((acc, k) => acc + (k.miktar || 0), 0)
+      const gizliTutarToplam = tumAltKalemler.reduce((acc, k) => {
+        const bf = k.birimFiyat ?? (k.malzeme ?? 0) + (k.iscilik ?? 0) + (k.ggk ?? 0)
+        return acc + (k.miktar || 0) * bf
+      }, 0)
+
+      ozetGruplari.push({
+        id: s.id,
+        kod: s.pozNo,
+        baslik: s.pozTanimi,
+        marka: s.markaModel ?? '',
+        grupExcelRow: excelRow,
+        ilkKalemRow,
+        sonKalemRow,
+        altKalemSayisi: tumAltKalemler.length,
+      })
+
+      const cells: Record<string, SpreadsheetCellValue> = {
+        pozNo: { raw: s.pozNo, bold: true },
+        pozTanimi: { raw: s.pozTanimi, bold: true },
+        markaModel: s.markaModel ?? '',
+        birim: '',
+        miktar: {
+          raw:
+            ilkKalemRow && sonKalemRow
+              ? `=SUM(E${ilkKalemRow}:E${sonKalemRow})`
+              : gizliMiktarToplam,
+          bold: true,
+        },
+        malzeme:
+          ilkKalemRow && sonKalemRow ? `=SUM(F${ilkKalemRow}:F${sonKalemRow})` : '',
+        iscilik:
+          ilkKalemRow && sonKalemRow ? `=SUM(G${ilkKalemRow}:G${sonKalemRow})` : '',
+        ggk: ilkKalemRow && sonKalemRow ? `=SUM(H${ilkKalemRow}:H${sonKalemRow})` : '',
+        birimFiyat: '',
+        toplam: {
+          raw:
+            ilkKalemRow && sonKalemRow
+              ? `=SUM(J${ilkKalemRow}:J${sonKalemRow})`
+              : gizliTutarToplam,
+          bold: true,
+        },
+      }
+
+      return {
+        id: s.id,
+        kind: 'group',
+        cells,
+      }
+    }
+
+    const ayriBirimFiyatVar =
+      s.birimFiyat != null && s.malzeme == null && s.iscilik == null && s.ggk == null
+
+    return {
+      id: s.id,
+      kind: 'item',
+      cells: {
+        pozNo: s.pozNo,
+        pozTanimi: s.pozTanimi,
+        markaModel: s.markaModel ?? '',
+        birim: s.birim,
+        miktar: s.miktar,
+        malzeme: s.malzeme ?? '',
+        iscilik: s.iscilik ?? '',
+        ggk: s.ggk ?? '',
+        birimFiyat: ayriBirimFiyatVar ? s.birimFiyat! : `=F${excelRow}+G${excelRow}+H${excelRow}`,
+        toplam: `=E${excelRow}*I${excelRow}`,
+      },
+    }
+  })
+
+  // Eğer hiç grup satırı yoksa (örn. "Sadece kalemler" görünümü) tüm satırları tek aralık yap
+  if (kalemAraliklari.length === 0 && gorunen.length > 0) {
+    kalemAraliklari.push({ baslangic: 2, bitis: gorunen.length + 1 })
+  }
+
+  const toplamFormul = (colHarf: string) => {
+    if (kalemAraliklari.length === 0) return 0
+    const parcalar = kalemAraliklari.map((a) => `${colHarf}${a.baslangic}:${colHarf}${a.bitis}`)
+    return `=SUM(${parcalar.join(', ')})`
+  }
+
+  kesifRows.push({
+    id: 'kesif-total',
+    kind: 'total',
+    readOnly: true,
+    cells: {
+      pozNo: '',
+      pozTanimi: { raw: 'GENEL TOPLAM', bold: true },
+      markaModel: '',
+      birim: '',
+      miktar: { raw: toplamFormul('E'), bold: true },
+      malzeme: { raw: toplamFormul('F'), bold: true },
+      iscilik: { raw: toplamFormul('G'), bold: true },
+      ggk: { raw: toplamFormul('H'), bold: true },
+      birimFiyat: '',
+      toplam: { raw: toplamFormul('J'), bold: true },
+    },
+  })
+
+  const ozetRows: SpreadsheetRow[] = ozetGruplari.map((g) => ({
+    id: `ozet-${g.id}`,
+    kind: 'item',
+    readOnly: true,
+    cells: {
+      kod: g.kod,
+      baslik: g.baslik,
+      marka: g.marka,
+      kalemSayisi:
+        g.ilkKalemRow && g.sonKalemRow
+          ? `=COUNT('Keşif Metrajı'!E${g.ilkKalemRow}:E${g.sonKalemRow})`
+          : g.altKalemSayisi,
+      toplamMiktar: `='Keşif Metrajı'!E${g.grupExcelRow}`,
+      toplamTutar: `='Keşif Metrajı'!J${g.grupExcelRow}`,
+    },
+  }))
+
+  const sonOzetRow = ozetRows.length + 1
+  ozetRows.push({
+    id: 'ozet-total',
+    kind: 'total',
+    readOnly: true,
+    cells: {
+      kod: '',
+      baslik: { raw: 'TOPLAM', bold: true },
+      marka: '',
+      kalemSayisi: ozetRows.length > 0 ? `=SUM(D2:D${sonOzetRow})` : 0,
+      toplamMiktar: ozetRows.length > 0 ? `=SUM(E2:E${sonOzetRow})` : 0,
+      toplamTutar: ozetRows.length > 0 ? `=SUM(F2:F${sonOzetRow})` : 0,
+    },
+  })
+
+  return [
+    {
+      id: 'kesif',
+      name: 'Keşif Metrajı',
+      columns: KESIF_SUTUNLARI,
+      rows: kesifRows,
+    },
+    {
+      id: 'ozet',
+      name: 'Bölüm Özeti',
+      columns: OZET_SUTUNLARI,
+      rows: ozetRows,
+    },
+  ]
+}
+
+function sayiCozumle(deger: string | number | null | undefined): number | undefined {
+  if (deger == null || deger === '') return undefined
+  if (typeof deger === 'number') return Number.isFinite(deger) ? deger : undefined
+  const temiz = deger.trim().replace(',', '.')
+  if (!temiz || temiz.startsWith('=')) return undefined
+  const n = Number(temiz)
+  return Number.isFinite(n) ? n : undefined
+}
 
 /**
- * Conwize "Estimate / Bill of quantity" düzeni:
- *  · versiyon seçici + göster (Show) filtresi
- *  · mavi başlıklı, kolon filtreli hesap tablosu
- *  · ana gruplar kalın, alt kalemler girintili
- *  · alt barda "İhale Paketine Böl", İçe Aktar / Dışa Aktar
+ * İhale Paketi Detayı -> Keşif Sekmesi
+ * `@ark/ui-kit` Spreadsheet bileşeni ve `Ark.Excel` backend entegrasyonu ile çalışır.
  */
 export function TakeoffTable({
   paket,
@@ -29,337 +276,425 @@ export function TakeoffTable({
   onKaydet: (satirlar: KesifSatiri[]) => void
 }) {
   const [satirlar, setSatirlar] = useState<KesifSatiri[]>(paket.keşif)
-  const [duzenle, setDuzenle] = useState(false)
+  const [duzenle, setDuzenle] = useState(true)
+  const [tamEkran, setTamEkran] = useState(false)
   const [goster, setGoster] = useState('Tümü')
   const [versiyon, setVersiyon] = useState('#1 27.10.2026')
-  const [importRaporu, setImportRaporu] = useState<{ hatalar: ImportHatasi[]; dosyaAdi: string } | null>(null)
-  const [bekleyen, setBekleyen] = useState<KesifSatiri[] | null>(null)
-  const dosyaRef = useRef<HTMLInputElement>(null)
+  const [sheets, setSheets] = useState<SpreadsheetSheet[]>(() =>
+    kesifSheetsOlustur(paket.keşif, 'Tümü'),
+  )
+  const [kaydedildiBilgisi, setKaydedildiBilgisi] = useState(false)
+  const [sihirbazAcik, setSihirbazAcik] = useState(false)
+  const [odak, setOdak] = useState<{ rowId: string; columnKey?: string; token: number } | null>(null)
+  // Kurallar backend'de (Ark.Excel); satırlar değiştikçe debounce ile doğrulanır
+  const dogrulama = useKesifDogrulama(satirlar)
+  // F3: sorunlu hücrelerde işaret + ipucu
+  const hucreIsaretleri = useMemo(
+    () => sorunlardanHucreIsaretleri(dogrulama.sonuc?.issues ?? []),
+    [dogrulama.sonuc],
+  )
+  // F4: otomatik düzeltme (önizleme → onay → uygula → geri al)
+  const [duzeltiliyor, setDuzeltiliyor] = useState<string | null>(null)
+  const [duzeltme, setDuzeltme] = useState<{ fixId: string; yanit: DuzeltmeYaniti } | null>(null)
+  const [duzeltHatasi, setDuzeltHatasi] = useState<string | null>(null)
+  const [geriAl, setGeriAl] = useState<{ baslik: string; sayi: number; onceki: KesifSatiri[] } | null>(null)
 
-  const toplamMiktar = satirlar
-    .filter((s) => s.seviye === 2)
-    .reduce((acc, s) => acc + s.miktar, 0)
+  // Paket değiştiğinde tabloyu senkronize et
+  useEffect(() => {
+    setSatirlar(paket.keşif)
+    setSheets(kesifSheetsOlustur(paket.keşif, goster))
+  }, [paket.id])
 
-  const satirGuncelle = (id: string, yama: Partial<KesifSatiri>) =>
-    setSatirlar((prev) => prev.map((s) => (s.id === id ? { ...s, ...yama } : s)))
+  // Tam ekran modunda ESC tuşu ile çıkış ve sayfa kaydırma kilidi
+  useEffect(() => {
+    if (!tamEkran) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !sihirbazAcik && !duzeltme) {
+        setTamEkran(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [tamEkran, sihirbazAcik, duzeltme])
 
-  const dosyaSec = async (file: File | undefined) => {
-    if (!file) return
-    const sonuc = await kesifDosyasiOku(file)
-    setImportRaporu({ hatalar: sonuc.hatalar, dosyaAdi: sonuc.dosyaAdi })
-    setBekleyen(sonuc.hatalar.some((h) => h.tip === 'hata') ? null : sonuc.satirlar)
+  // Filtre değiştiğinde Spreadsheet sayfalarını yeniden oluştur
+  const filtreDegistir = (yeniGoster: string) => {
+    setGoster(yeniGoster)
+    setSheets(kesifSheetsOlustur(satirlar, yeniGoster))
+  }
+
+  // Doğrulama sorununa tıklayınca tabloda ilgili hücreye git (filtre satırı gizliyorsa 'Tümü'ne dön)
+  const satiraGit = (rowId: string, columnKey?: string) => {
+    if (goster !== 'Tümü') filtreDegistir('Tümü')
+    setOdak({ rowId, columnKey, token: Date.now() })
+  }
+
+  const duzeltBasligi = (fixId: string) =>
+    dogrulama.referans?.fixes.find((f) => f.id === fixId)?.title ?? 'Otomatik düzeltme'
+
+  const duzeltIste = async (fixId: string) => {
+    setDuzeltiliyor(fixId)
+    setDuzeltHatasi(null)
+    try {
+      setDuzeltme({ fixId, yanit: await kesifDuzelt(fixId, satirlar) })
+    } catch (e) {
+      setDuzeltHatasi(e instanceof Error ? e.message : 'Düzeltme hazırlanamadı.')
+    } finally {
+      setDuzeltiliyor(null)
+    }
+  }
+
+  const duzeltUygula = () => {
+    if (!duzeltme) return
+    const yeni = duzeltmeyiUygula(satirlar, duzeltme.yanit)
+    setGeriAl({
+      baslik: duzeltBasligi(duzeltme.fixId),
+      sayi: duzeltme.yanit.changes.length,
+      onceki: satirlar,
+    })
+    setSatirlar(yeni)
+    setSheets(kesifSheetsOlustur(yeni, goster))
+    setKaydedildiBilgisi(false)
+    setDuzeltme(null)
+  }
+
+  const duzeltGeriAl = () => {
+    if (!geriAl) return
+    setSatirlar(geriAl.onceki)
+    setSheets(kesifSheetsOlustur(geriAl.onceki, goster))
+    setKaydedildiBilgisi(false)
+    setGeriAl(null)
+  }
+
+  const istatistik = useMemo(() => {
+    const gruplar = satirlar.filter((s) => s.seviye === 1).length
+    const kalemler = satirlar.filter((s) => s.seviye !== 1)
+    const toplamMiktar = kalemler.reduce((acc, s) => acc + (s.miktar || 0), 0)
+    const toplamTutar = kalemler.reduce((acc, s) => {
+      const bf = s.birimFiyat ?? (s.malzeme ?? 0) + (s.iscilik ?? 0) + (s.ggk ?? 0)
+      return acc + (s.miktar || 0) * bf
+    }, 0)
+    return { gruplar, kalemSayisi: kalemler.length, toplamMiktar, toplamTutar }
+  }, [satirlar])
+
+  const handleSpreadsheetChange = (
+    nextSheets: SpreadsheetSheet[],
+    change: SpreadsheetChange,
+  ) => {
+    setSheets(nextSheets)
+    setKaydedildiBilgisi(false)
+    setGeriAl(null) // düzeltme sonrası elle düzenleme yapıldıysa eski anlık görüntüye dönmek yanlış olur
+
+    const kesifSheet = nextSheets.find((sh) => sh.id === 'kesif')
+    if (!kesifSheet) return
+
+    if (change.sheetId === 'kesif') {
+      const rowMap = new Map(kesifSheet.rows.map((r) => [r.id, r]))
+      setSatirlar((prev) =>
+        prev.map((s) => {
+          const r = rowMap.get(s.id)
+          if (!r) return s
+
+          const pozNo = String(hucreHamDeger(r.cells.pozNo)).trim()
+          const pozTanimi = String(hucreHamDeger(r.cells.pozTanimi)).trim()
+          const markaModel = String(hucreHamDeger(r.cells.markaModel)).trim()
+
+          if (s.seviye === 1) {
+            return {
+              ...s,
+              pozNo: pozNo || s.pozNo,
+              pozTanimi: pozTanimi || s.pozTanimi,
+              markaModel: markaModel || undefined,
+            }
+          }
+
+          const birim = String(hucreHamDeger(r.cells.birim)).trim()
+          const miktar = sayiCozumle(hucreHamDeger(r.cells.miktar)) ?? s.miktar
+          const malzeme = sayiCozumle(hucreHamDeger(r.cells.malzeme))
+          const iscilik = sayiCozumle(hucreHamDeger(r.cells.iscilik))
+          const ggk = sayiCozumle(hucreHamDeger(r.cells.ggk))
+          const birimFiyat = sayiCozumle(hucreHamDeger(r.cells.birimFiyat))
+
+          return {
+            ...s,
+            pozNo,
+            pozTanimi,
+            markaModel: markaModel || undefined,
+            birim,
+            miktar,
+            malzeme,
+            iscilik,
+            ggk,
+            birimFiyat,
+          }
+        }),
+      )
+    }
+  }
+
+  const handleInsertRow = (cmd: SpreadsheetRowCommand) => {
+    const yeniSatir: KesifSatiri = {
+      id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      seviye: 2,
+      pozNo: '',
+      pozTanimi: 'Yeni İmalat Kalemi',
+      birim: 'm²',
+      miktar: 1,
+      teklifKirilimi: 'Malzeme + İşçilik',
+    }
+
+    setSatirlar((prev) => {
+      const hedefIdx = cmd.rowId ? prev.findIndex((s) => s.id === cmd.rowId) : -1
+      const klon = [...prev]
+      if (hedefIdx === -1) {
+        klon.push(yeniSatir)
+      } else {
+        klon.splice(hedefIdx + 1, 0, yeniSatir)
+      }
+      setSheets(kesifSheetsOlustur(klon, goster))
+      return klon
+    })
+  }
+
+  const handleDeleteRow = (cmd: SpreadsheetRowCommand) => {
+    if (!cmd.rowId) return
+    setSatirlar((prev) => {
+      const klon = prev.filter((s) => s.id !== cmd.rowId)
+      setSheets(kesifSheetsOlustur(klon, goster))
+      return klon
+    })
+  }
+
+  const handleReset = () => {
+    setSatirlar(paket.keşif)
+    setSheets(kesifSheetsOlustur(paket.keşif, goster))
+  }
+
+  const iceAktarUygula = (yeniSatirlar: KesifSatiri[], mod: AktarimModu) => {
+    const yeniListe = mod === 'degistir' ? yeniSatirlar : [...satirlar, ...yeniSatirlar]
+    setSatirlar(yeniListe)
+    setSheets(kesifSheetsOlustur(yeniListe, goster))
+    onKaydet(yeniListe)
+    setKaydedildiBilgisi(true)
+    setSihirbazAcik(false)
+    setDuzenle(true)
   }
 
   return (
-    <div className="space-y-4">
-      {/* Araç çubuğu */}
-      <Card padded={false}>
-        <div className="flex flex-wrap items-center gap-3 p-4">
-          <label className="relative flex flex-col">
-            <span className="mb-1 text-[12px] font-medium text-muted-foreground">Versiyon</span>
-            <span className="inline-flex h-11 min-w-[190px] items-center justify-between gap-3 rounded-xl border border-line bg-white px-4">
-              <span className="text-[14px] font-medium text-ink">{versiyon}</span>
-              <Icon name="chevron-down" size={15} className="text-gray" />
-            </span>
-            <select
-              value={versiyon}
-              onChange={(e) => setVersiyon(e.target.value)}
-              className="absolute bottom-0 left-0 h-11 w-full cursor-pointer opacity-0"
-              aria-label="Versiyon"
-            >
-              <option>#1 27.10.2026</option>
-              <option>#2 28.10.2026</option>
-              <option>#3 29.10.2026</option>
-            </select>
-          </label>
+    <div
+      className={
+        tamEkran
+          ? 'fixed inset-0 z-50 flex flex-col bg-surface overflow-hidden'
+          : 'space-y-4'
+      }
+    >
+      {/* Üst filtre ve aksiyon çubuğu (tam ekranda gizlenir) */}
+      {!tamEkran && (
+        <Card padded={false} className="shrink-0">
+          <div className="flex flex-wrap items-center gap-3 p-4">
+            <label className="relative flex flex-col">
+              <span className="mb-1 text-[12px] font-medium text-muted-foreground">Versiyon</span>
+              <span className="inline-flex h-11 min-w-[190px] items-center justify-between gap-3 rounded-xl border border-line bg-white px-4">
+                <span className="text-[14px] font-medium text-ink">{versiyon}</span>
+                <Icon name="chevron-down" size={15} className="text-gray" />
+              </span>
+              <select
+                value={versiyon}
+                onChange={(e) => setVersiyon(e.target.value)}
+                className="absolute bottom-0 left-0 h-11 w-full cursor-pointer opacity-0"
+                aria-label="Versiyon"
+              >
+                <option>#1 27.10.2026</option>
+                <option>#2 28.10.2026</option>
+                <option>#3 29.10.2026</option>
+              </select>
+            </label>
 
-          <LabeledFilter
-            label="Göster"
-            value={goster}
-            options={['Tümü', 'Sadece ana gruplar', 'Sadece kalemler']}
-            onChange={setGoster}
-          />
-
-        </div>
-      </Card>
-
-
-      {/* Hesap tablosu */}
-      <Card padded={false}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] border-collapse text-[14px]">
-            <thead>
-              <tr className="bg-info-bg/60">
-                <th className="w-12 border-r border-border px-3 py-3 text-left">
-                  <IconButton icon="plus" label="Satır ekle" size="sm" className="border-0 bg-transparent" />
-                </th>
-                {[
-                  { h: 'No', w: 'w-[70px]', align: 'left' },
-                  { h: 'Poz Tanımı', w: 'w-[360px]', align: 'left' },
-                  { h: 'Birim', w: 'w-[100px]', align: 'left' },
-                  { h: 'Miktar', w: 'w-[130px]', align: 'right' },
-                  { h: 'Malzeme', w: 'w-[130px]', align: 'right' },
-                  { h: 'İşçilik', w: 'w-[130px]', align: 'right' },
-                  { h: 'GGK', w: 'w-[130px]', align: 'right' },
-                  { h: 'Birim Fiyat', w: 'w-[140px]', align: 'right' },
-                ].map((c) => (
-                  <th
-                    key={c.h}
-                    className={`border-r border-border px-4 py-3 ${c.align === 'right' ? 'text-right' : 'text-left'}`}
-                  >
-                    <span
-                      className={`inline-flex items-center gap-2 text-[13px] font-bold text-ink ${
-                        c.align === 'right' ? 'flex-row-reverse' : ''
-                      }`}
-                    >
-                      {c.h}
-                      <Icon name="filter" size={13} className="text-gray" />
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {satirlar.map((s, i) => {
-                const grupSatiri = s.seviye === 1
-                const girintili = s.seviye === 3
-                return (
-                  <tr
-                    key={s.id}
-                    className={`border-b border-border ${
-                      grupSatiri ? 'bg-surface-soft/70' : 'bg-surface'
-                    } hover:bg-info-bg/40`}
-                  >
-                    <td className="border-r border-border px-3 py-2.5 text-center text-[13px] text-muted-foreground">
-                      {i + 1}
-                    </td>
-                    <td className="border-r border-border px-4 py-2.5 font-mono text-[13px] whitespace-nowrap">
-                      {s.pozNo}
-                    </td>
-                    <td
-                      className={`border-r border-border px-4 py-2.5 ${
-                        grupSatiri ? 'font-bold text-black' : girintili ? 'pl-9 text-ink' : 'text-ink'
-                      }`}
-                    >
-                      {duzenle && !grupSatiri ? (
-                        <input
-                          value={s.pozTanimi}
-                          onChange={(e) => satirGuncelle(s.id, { pozTanimi: e.target.value })}
-                          placeholder="Poz tanımı zorunlu"
-                          className={`h-8 w-full rounded border px-2 outline-none focus:border-black ${
-                            s.pozTanimi ? 'border-line' : 'border-danger-strong bg-danger-soft'
-                          }`}
-                        />
-                      ) : (
-                        <span className={s.pozTanimi ? '' : 'text-danger'}>
-                          {s.pozTanimi || 'Poz tanımı eksik'}
-                        </span>
-                      )}
-                    </td>
-                    <td className="border-r border-border px-4 py-2.5 text-muted-foreground">
-                      {duzenle && !grupSatiri ? (
-                        <input
-                          value={s.birim}
-                          onChange={(e) => satirGuncelle(s.id, { birim: e.target.value })}
-                          className="h-8 w-20 rounded border border-line px-2 outline-none focus:border-black"
-                        />
-                      ) : (
-                        s.birim || '—'
-                      )}
-                    </td>
-                    <td className="border-r border-border px-4 py-2.5 text-right font-bold tabular-nums">
-                      {duzenle && !grupSatiri ? (
-                        <input
-                          value={s.miktar}
-                          type="number"
-                          onChange={(e) => satirGuncelle(s.id, { miktar: Number(e.target.value) })}
-                          className="h-8 w-28 rounded border border-line px-2 text-right outline-none focus:border-black"
-                        />
-                      ) : (
-                        s.miktar ? s.miktar.toLocaleString('tr-TR') : ''
-                      )}
-                    </td>
-                    {[s.malzeme, s.iscilik, s.ggk].map((f, idx) => (
-                      <td key={idx} className="border-r border-border px-4 py-2.5 text-right text-muted-foreground tabular-nums">
-                        {f ? f.toLocaleString('tr-TR') : <Icon name="lock" size={13} className="ml-auto text-gray" />}
-                      </td>
-                    ))}
-                    <td className="border-r border-border px-4 py-2.5 text-right text-muted-foreground tabular-nums">
-                      {s.birimFiyat ? s.birimFiyat.toLocaleString('tr-TR') : <Icon name="lock" size={13} className="ml-auto text-gray" />}
-                    </td>
-                  </tr>
-                )
-              })}
-
-              {satirlar.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-[14px] text-muted-foreground">
-                    Keşif satırı yok. Excel Keşif dosyasını içe aktarın.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-
-            <tfoot>
-              <tr className="bg-surface-soft">
-                <td className="border-r border-border px-4 py-3.5 text-[13px] font-bold text-muted-foreground">
-                  {satirlar.length}
-                </td>
-                <td className="border-r border-border px-4 py-3.5 text-[13px] font-bold tracking-wide text-muted-foreground uppercase">
-                  Toplam
-                </td>
-                <td className="border-r border-border px-4 py-3.5" />
-                <td className="border-r border-border px-4 py-3.5 text-right text-[14px] font-bold tabular-nums">
-                  {toplamMiktar.toLocaleString('tr-TR')}
-                </td>
-                <td colSpan={4} className="px-4 py-3.5 text-right text-[13px] text-muted-foreground">
-                  Fiyat alanları teklif aşamasında doldurulur
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        {/* Alt aksiyon çubuğu */}
-        <div className="flex flex-wrap items-center gap-3 border-t border-border px-4 py-3">
-          <div className="ml-auto flex items-center gap-2">
-            <Button
-              variant="secondary"
-              icon="upload"
-              iconRight="chevron-down"
-              onClick={() => dosyaRef.current?.click()}
-            >
-              İçe Aktar
-            </Button>
-            <input
-              ref={dosyaRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={(e) => {
-                void dosyaSec(e.target.files?.[0])
-                e.target.value = ''
-              }}
+            <LabeledFilter
+              label="Göster"
+              value={goster}
+              options={['Tümü', 'Sadece ana gruplar', 'Sadece kalemler']}
+              onChange={filtreDegistir}
             />
-            <Button
-              variant="secondary"
-              icon="download"
-              iconRight="chevron-down"
-              onClick={() => kesifDisaAktar(satirlar, paket.ad)}
-            >
-              Dışa Aktar
-            </Button>
-            <Button variant="secondary" icon="file-spreadsheet" onClick={kesifSablonuIndir}>
-              Şablon
-            </Button>
-            {duzenle ? (
+
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button variant="secondary" icon="upload" onClick={() => setSihirbazAcik(true)}>
+                Excel İçe Aktar
+              </Button>
+              <Button
+                variant="secondary"
+                icon="download"
+                onClick={() => void kesifDisaAktar(satirlar, paket.ad)}
+              >
+                Dışa Aktar
+              </Button>
+              <Button
+                variant="secondary"
+                icon="file-spreadsheet"
+                onClick={() => void kesifSablonuIndir()}
+              >
+                Şablon
+              </Button>
+              <Button
+                variant={duzenle ? 'secondary' : 'ghost'}
+                icon={duzenle ? 'lock' : 'edit'}
+                onClick={() => setDuzenle((d) => !d)}
+              >
+                {duzenle ? 'Salt Okunur' : 'Düzenleme Modu'}
+              </Button>
               <Button
                 variant="brand"
                 icon="check"
                 onClick={() => {
                   onKaydet(satirlar)
-                  setDuzenle(false)
+                  setKaydedildiBilgisi(true)
                 }}
               >
-                Kaydet
+                {kaydedildiBilgisi ? 'Kaydedildi' : 'Kaydet'}
               </Button>
-            ) : (
-              <Button variant="brand" icon="edit" onClick={() => setDuzenle(true)}>
-                Düzenle
-              </Button>
-            )}
+            </div>
           </div>
+        </Card>
+      )}
+
+      {/* Doğrulama şeridi: BOQ'u Kontrol Et (E01–E06, W01–W04 — backend) */}
+      <div className={tamEkran ? 'shrink-0 px-3 py-2' : ''}>
+        <DogrulamaSeridi
+          durum={dogrulama}
+          satirlar={satirlar}
+          onSatiraGit={satiraGit}
+          onDuzelt={(fixId) => void duzeltIste(fixId)}
+          duzeltiliyor={duzeltiliyor}
+          duzeltPasif={!duzenle}
+        />
+        {duzeltHatasi && (
+          <p className="mt-2 rounded-xl border border-danger/30 bg-danger-soft px-4 py-2 text-[13px] text-danger">
+            {duzeltHatasi}
+          </p>
+        )}
+        {geriAl && (
+          <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-success/30 bg-success-soft px-4 py-2 text-[13px] text-success">
+            <span>
+              <strong className="font-bold">{geriAl.baslik}</strong> uygulandı ({geriAl.sayi} değişiklik). Kaydet’e
+              basana kadar kaydedilmedi.
+            </span>
+            <Button variant="secondary" size="sm" icon="rotate-ccw" className="ml-auto" onClick={duzeltGeriAl}>
+              Geri al
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* @ark/ui-kit Spreadsheet bileşeni */}
+      <Card
+        padded={false}
+        className={
+          tamEkran
+            ? 'flex-1 min-h-0 flex flex-col overflow-hidden rounded-none border-0'
+            : 'overflow-hidden'
+        }
+      >
+        <div className={tamEkran ? 'h-full w-full flex-1 min-h-0' : 'h-[640px] w-full'}>
+          <Spreadsheet
+            sheets={sheets}
+            onChange={handleSpreadsheetChange}
+            readOnly={!duzenle}
+            collapsibleGroups
+            cellMarks={hucreIsaretleri}
+            focusRequest={odak ? { ...odak, sheetId: 'kesif' } : undefined}
+            onInsertRow={handleInsertRow}
+            onDeleteRow={handleDeleteRow}
+            onReset={handleReset}
+            numberFormat={{ locale: 'tr-TR', currency: 'TRY' }}
+            header={
+              <>
+                <div className="flex min-w-0 items-center gap-2 text-[12px]">
+                  <span className="font-bold text-black">{paket.ad}</span>
+                  <span className="text-muted-foreground">
+                    — {istatistik.gruplar} ana grup, {istatistik.kalemSayisi} poz kalemi
+                  </span>
+                  {tamEkran && (
+                    <Badge tone="info" size="sm">
+                      Tam Ekran
+                    </Badge>
+                  )}
+                </div>
+                <div className="ml-auto flex items-center gap-3 text-[12px] tabular-nums">
+                  <span>
+                    Toplam Miktar:{' '}
+                    <strong className="font-bold text-black">
+                      {istatistik.toplamMiktar.toLocaleString('tr-TR', {
+                        maximumFractionDigits: 2,
+                      })}
+                    </strong>
+                  </span>
+                  {istatistik.toplamTutar > 0 && (
+                    <span>
+                      Hesaplanan Tutar:{' '}
+                      <strong className="font-bold text-black">
+                        {istatistik.toplamTutar.toLocaleString('tr-TR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{' '}
+                        ₺
+                      </strong>
+                    </span>
+                  )}
+                  {tamEkran && (
+                    <Button
+                      variant="brand"
+                      size="sm"
+                      icon="check"
+                      onClick={() => {
+                        onKaydet(satirlar)
+                        setKaydedildiBilgisi(true)
+                      }}
+                      title="Değişiklikleri kaydet"
+                    >
+                      {kaydedildiBilgisi ? 'Kaydedildi' : 'Kaydet'}
+                    </Button>
+                  )}
+                  <Button
+                    variant={tamEkran ? 'brand' : 'secondary'}
+                    size="sm"
+                    icon={tamEkran ? 'minimize' : 'maximize'}
+                    onClick={() => setTamEkran((prev) => !prev)}
+                    title={tamEkran ? 'Eski boyuta dön (Esc)' : 'Tüm ekranı kapla'}
+                  >
+                    {tamEkran ? 'Küçült' : 'Tam Ekran'}
+                  </Button>
+                </div>
+              </>
+            }
+          />
         </div>
       </Card>
 
-      {/* İçe aktarma raporu */}
-      <Modal
-        open={!!importRaporu}
-        onClose={() => {
-          setImportRaporu(null)
-          setBekleyen(null)
-        }}
-        title="Excel Keşif İçe Aktarma Raporu"
-        description={importRaporu?.dosyaAdi}
-        size="lg"
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setImportRaporu(null)
-                setBekleyen(null)
-              }}
-            >
-              Kapat
-            </Button>
-            <Button
-              variant="brand"
-              icon="upload"
-              disabled={!bekleyen || bekleyen.length === 0}
-              onClick={() => {
-                if (!bekleyen) return
-                setSatirlar((prev) => [...prev, ...bekleyen])
-                setImportRaporu(null)
-                setBekleyen(null)
-                setDuzenle(true)
-              }}
-            >
-              {bekleyen ? `${bekleyen.length} satırı içe aktar` : 'İçe aktarılamıyor'}
-            </Button>
-          </>
-        }
-      >
-        {importRaporu && importRaporu.hatalar.length === 0 && bekleyen ? (
-          <div className="rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-[14px] text-success">
-            <strong className="font-bold">Tüm satırlar geçerli.</strong> {bekleyen.length} satır içe aktarılmaya hazır.
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-xl border border-border">
-            <table className="w-full border-collapse text-[13px]">
-              <thead>
-                <tr className="border-b border-line bg-surface-muted">
-                  {['Satır', 'Alan', 'Tip', 'Açıklama'].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {importRaporu?.hatalar.map((h, i) => (
-                  <tr key={i} className="border-b border-border last:border-0">
-                    <td className="px-4 py-2.5 font-mono text-[12px]">{h.satir || '—'}</td>
-                    <td className="px-4 py-2.5">{h.alan}</td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                          h.tip === 'hata' ? 'bg-danger-soft text-danger' : 'bg-warning-soft text-warning'
-                        }`}
-                      >
-                        {h.tip === 'hata' ? 'Hata' : 'Uyarı'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-muted-foreground">{h.mesaj}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Otomatik düzeltme önizlemesi (F4) */}
+      {duzeltme && (
+        <DuzeltOnizlemeModal
+          baslik={duzeltBasligi(duzeltme.fixId)}
+          aciklama={dogrulama.referans?.fixes.find((f) => f.id === duzeltme.fixId)?.description}
+          yanit={duzeltme.yanit}
+          satirlar={satirlar}
+          onUygula={duzeltUygula}
+          onVazgec={() => setDuzeltme(null)}
+        />
+      )}
 
-        <div className="mt-4">
-          <p className="mb-2 text-[13px] font-bold text-ink">Beklenen kolonlar</p>
-          <div className="flex flex-wrap gap-2">
-            {KESIF_SABLON_BASLIKLARI.map((b) => (
-              <span key={b} className="rounded-lg border border-line bg-surface-muted px-2.5 py-1 font-mono text-[12px] text-ink">
-                {b}
-              </span>
-            ))}
-          </div>
-        </div>
-      </Modal>
+      {/* Excel içe aktarma sihirbazı */}
+      {sihirbazAcik && (
+        <ImportWizard
+          mevcutSatirSayisi={satirlar.length}
+          onClose={() => setSihirbazAcik(false)}
+          onTamam={iceAktarUygula}
+        />
+      )}
     </div>
   )
 }

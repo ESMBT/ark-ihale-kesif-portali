@@ -8,6 +8,7 @@ import { personeller } from '../../data/mock'
 import { sozlesmeTuruBul, turAlanlari } from '../../data/sozlesmeTurleri'
 import type { IhalePaketi } from '../../data/types'
 import { bilgiDurumu } from '../../lib/proje'
+import type { YayinKapisi } from '../../lib/yayinKapisi'
 
 /**
  * İHALE PAKETİ YAYINLAMA
@@ -18,11 +19,17 @@ export function PackagePublishModal({
   paket,
   onClose,
   onYayinla,
+  kesifKapisi,
+  onKesifeGit,
 }: {
   open: boolean
   paket: IhalePaketi | null
   onClose: () => void
   onYayinla: () => void
+  /** Keşif doğrulama kapısı (F5); verilmişse kapalıyken yayınlanamaz */
+  kesifKapisi?: YayinKapisi
+  /** Keşif sekmesine götürür (hataları düzeltmek için) */
+  onKesifeGit?: () => void
 }) {
   const [hata, setHata] = useState('')
 
@@ -37,6 +44,10 @@ export function PackagePublishModal({
   const yayinla = () => {
     if (!bilgi.tamam) {
       setHata('Eksik alanlar tamamlanmadan ihale paketi yayınlanamaz.')
+      return
+    }
+    if (kesifKapisi && !kesifKapisi.izinli) {
+      setHata(kesifKapisi.mesaj)
       return
     }
     onYayinla()
@@ -65,7 +76,12 @@ export function PackagePublishModal({
           >
             Vazgeç
           </Button>
-          <Button variant="brand" icon="send" onClick={yayinla}>
+          <Button
+            variant="brand"
+            icon="send"
+            disabled={Boolean(kesifKapisi && !kesifKapisi.izinli)}
+            onClick={yayinla}
+          >
             Yayınla
           </Button>
         </>
@@ -91,6 +107,29 @@ export function PackagePublishModal({
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {kesifKapisi && (
+          <div
+            className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-[13px] ${
+              kesifKapisi.izinli
+                ? 'border-success/30 bg-success-soft text-success'
+                : kesifKapisi.durum === 'hata'
+                  ? 'border-danger/30 bg-danger-soft text-danger'
+                  : 'border-line bg-surface-soft text-ink'
+            }`}
+            role="status"
+          >
+            <Icon name={kesifKapisi.izinli ? 'check-circle' : 'alert-triangle'} size={16} />
+            <span>
+              <strong className="font-bold">Keşif doğrulaması:</strong> {kesifKapisi.mesaj}
+            </span>
+            {kesifKapisi.durum === 'hata' && onKesifeGit && (
+              <Button variant="secondary" size="sm" className="ml-auto" onClick={onKesifeGit}>
+                Keşife git ve düzelt
+              </Button>
+            )}
           </div>
         )}
 

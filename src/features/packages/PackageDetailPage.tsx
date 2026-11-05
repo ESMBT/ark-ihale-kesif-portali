@@ -16,7 +16,10 @@ import { QuestionAnswerTab } from './QuestionAnswerTab'
 import { IhaleOzeti } from './IhaleOzeti'
 import { FirmaOnerModal } from './FirmaOnerModal'
 import { PackagePublishModal } from './PackagePublishModal'
+import { BOS_KESIF, useKesifDogrulama } from '../../lib/kesifDogrulama'
 import { modulYolu } from '../../lib/modul'
+import { yayinKapisiHesapla } from '../../lib/yayinKapisi'
+import { YayinlaDugmesi } from './YayinKapisi'
 
 export function PackageDetailPage() {
   const { id, paketId } = useParams()
@@ -31,6 +34,9 @@ export function PackageDetailPage() {
   const [revizeModal, setRevizeModal] = useState(false)
   const [yayinOnizleme, setYayinOnizleme] = useState(false)
   const [gerekce, setGerekce] = useState('')
+  // F5: yayın kapısı — kaydedilmiş keşif satırlarının doğrulaması (kurallar backend'de)
+  const kesifDogrulama = useKesifDogrulama(paket?.keşif ?? BOS_KESIF)
+  const yayinKapisi = yayinKapisiHesapla(kesifDogrulama)
 
   if (!proje || !paket) {
     return (
@@ -68,9 +74,12 @@ export function PackageDetailPage() {
               Yayında
             </Badge>
           ) : (
-            <Button variant="brand" icon="send" onClick={() => setYayinOnizleme(true)}>
-              Yayınla
-            </Button>
+            <YayinlaDugmesi
+              kapi={yayinKapisi}
+              onYayinla={() => setYayinOnizleme(true)}
+              onKesifeGit={() => setSekme('kesif')}
+              onTekrar={kesifDogrulama.yenile}
+            />
           )}
           <IconButton icon="refresh" label="Geri al" tone="brand" size="lg" />
         </div>
@@ -170,6 +179,11 @@ export function PackageDetailPage() {
       <PackagePublishModal
         open={yayinOnizleme}
         paket={paket}
+        kesifKapisi={yayinKapisi}
+        onKesifeGit={() => {
+          setYayinOnizleme(false)
+          setSekme('kesif')
+        }}
         onClose={() => setYayinOnizleme(false)}
         onYayinla={() => paketYayinla(proje.id, paket.id)}
       />

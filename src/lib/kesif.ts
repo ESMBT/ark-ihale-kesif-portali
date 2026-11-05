@@ -19,6 +19,75 @@ export const KESIF_ZORUNLU_SUTUNLAR = ['Poz Tanımı', 'Birim', 'Miktar', 'Tekli
 
 export const TEKLIF_KIRILIMLARI = ['Malzeme', 'İşçilik', 'GGK', 'Nakliye', 'Malzeme + İşçilik'] as const
 
+export type SurveyNoteDto = {
+  row: number
+  code: string
+  text: string
+}
+
+export type SurveyWarningDto = {
+  code: string
+  message: string
+  row?: number | null
+  column?: number | null
+}
+
+export type SurveyTotalsDto = {
+  row?: number | null
+  materialTotalUsd?: number | null
+  laborTotalTl?: number | null
+  materialGgkarTotalUsd?: number | null
+  laborGgkarTotalTl?: number | null
+  totalUsd?: number | null
+  totalTl?: number | null
+}
+
+export type SurveyItemDto = {
+  sourceRow: number
+  code: string
+  description: string
+  additionalDescription?: string | null
+  brands: string
+  unit?: string | null
+  quantity?: number | null
+  unitPrice?: number | null
+  materialUnitPriceUsd?: number | null
+  materialTotalUsd?: number | null
+  laborUnitPriceTl?: number | null
+  laborTotalTl?: number | null
+  materialGgkarUnitPriceUsd?: number | null
+  materialGgkarTotalUsd?: number | null
+  laborGgkarUnitPriceTl?: number | null
+  laborGgkarTotalTl?: number | null
+  totalUsd?: number | null
+  totalTl?: number | null
+  heading?: string | null
+  notes: SurveyNoteDto[]
+}
+
+export type SurveySectionDto = {
+  sourceRow: number
+  code: string
+  title: string
+  brands: string
+  depth: number
+  heading?: string | null
+  notes: SurveyNoteDto[]
+  items: SurveyItemDto[]
+}
+
+export type SurveyDocumentDto = {
+  sheetName: string
+  projectName?: string | null
+  documentTitle?: string | null
+  disciplineTitle?: string | null
+  headerRow?: number | null
+  sections: SurveySectionDto[]
+  totals?: SurveyTotalsDto | null
+  computedTotals: SurveyTotalsDto
+  warnings: SurveyWarningDto[]
+}
+
 export type ImportHatasi = {
   satir: number
   alan: string
@@ -30,10 +99,239 @@ export type ImportSonucu = {
   satirlar: KesifSatiri[]
   hatalar: ImportHatasi[]
   dosyaAdi: string
+  kaynak?: 'ark-excel' | 'yerel'
+  belge?: SurveyDocumentDto
 }
 
-/** Standart "Excel Keşif" çalışma dosyasını indirir */
-export function kesifSablonuIndir() {
+const EXCEL_API_BASE = '/api/excel/survey'
+
+/** Ark.Excel SurveyDocument modelini portalın KesifSatiri[] yapısına dönüştürür */
+export function surveyDocumentToKesifSatirlari(doc: SurveyDocumentDto): KesifSatiri[] {
+  return surveyDocumentToKaynakliSatirlar(doc).map((k) => k.satir)
+}
+
+export type KaynakliKesifSatiri = {
+  satir: KesifSatiri
+  /** Excel'deki 1 tabanlı kaynak satır numarası (yoksa 0) */
+  kaynakSatir: number
+}
+
+/** surveyDocumentToKesifSatirlari ile aynı dönüşüm; her satırın Excel kaynak satırını da döndürür */
+export function surveyDocumentToKaynakliSatirlar(doc: SurveyDocumentDto): KaynakliKesifSatiri[] {
+  const satirlar: KaynakliKesifSatiri[] = []
+  const ts = Date.now()
+
+  doc.sections.forEach((section, secIdx) => {
+    const hasSectionHeader = Boolean(section.code?.trim() || section.title?.trim())
+
+    if (hasSectionHeader) {
+      const notMetni = section.notes?.map((n) => n.text).filter(Boolean).join(' | ')
+      satirlar.push({
+        kaynakSatir: section.sourceRow || 0,
+        satir: {
+          id: `sec-${section.sourceRow || secIdx + 1}-${ts}-${secIdx}`,
+          seviye: 1,
+          pozNo: section.code?.trim() || String(secIdx + 1).padStart(2, '0'),
+          pozTanimi: section.title?.trim() || section.code?.trim() || 'BÖLÜM',
+          aciklama: notMetni || section.heading || undefined,
+          birim: '',
+          miktar: 0,
+          teklifKirilimi: 'Malzeme + İşçilik',
+          markaModel: section.brands?.trim() || undefined,
+        },
+      })
+    }
+
+    section.items.forEach((item, itemIdx) => {
+      const malzeme = item.materialUnitPriceUsd ?? item.materialTotalUsd ?? undefined
+      const iscilik = item.laborUnitPriceTl ?? item.laborTotalTl ?? undefined
+      const ggk =
+        item.materialGgkarUnitPriceUsd ??
+        item.laborGgkarUnitPriceTl ??
+        item.materialGgkarTotalUsd ??
+        item.laborGgkarTotalTl ??
+        undefined
+
+      const hesaplananBirimFiyat =
+        (malzeme ?? 0) + (iscilik ?? 0) + (ggk ?? 0) > 0
+          ? (malzeme ?? 0) + (iscilik ?? 0) + (ggk ?? 0)
+          : undefined
+
+      // Birim fiyat önceliği: dosyadaki birim fiyat/maliyet → bileşen toplamı → toplam ÷ miktar
+      const toplamdanBirim = (toplam?: number | null) =>
+        toplam != null && item.quantity ? toplam / item.quantity : undefined
+      const birimFiyat =
+        item.unitPrice ??
+        hesaplananBirimFiyat ??
+        toplamdanBirim(item.totalTl) ??
+        toplamdanBirim(item.totalUsd)
+
+      let teklifKirilimi: KesifSatiri['teklifKirilimi'] = 'Malzeme + İşçilik'
+      if (malzeme != null && iscilik == null) {
+        teklifKirilimi = 'Malzeme'
+      } else if (iscilik != null && malzeme == null) {
+        teklifKirilimi = 'İşçilik'
+      } else if (ggk != null && malzeme == null && iscilik == null) {
+        teklifKirilimi = 'GGK'
+      }
+
+      const notMetni = item.notes?.map((n) => n.text).filter(Boolean).join(' | ')
+
+      const aciklama =
+        [item.additionalDescription?.trim(), notMetni].filter(Boolean).join(' | ') ||
+        item.heading ||
+        undefined
+
+      satirlar.push({
+        kaynakSatir: item.sourceRow || 0,
+        satir: {
+          id: `itm-${item.sourceRow || itemIdx + 1}-${ts}-${secIdx}-${itemIdx}`,
+          seviye: section.depth > 1 ? 3 : 2,
+          pozNo:
+            item.code?.trim() ||
+            `${section.code?.trim() || String(secIdx + 1).padStart(2, '0')}.${String(itemIdx + 1).padStart(2, '0')}`,
+          pozTanimi: item.description?.trim() || '',
+          aciklama,
+          birim: item.unit?.trim() || '',
+          miktar: item.quantity ?? 0,
+          teklifKirilimi,
+          malzeme,
+          iscilik,
+          ggk,
+          birimFiyat,
+          markaModel: item.brands?.trim() || undefined,
+        },
+      })
+    })
+  })
+
+  return satirlar
+}
+
+/** KesifSatiri[] listesini Ark.Excel SurveyDocument yapısına dönüştürür */
+export function kesifSatirlariToSurveyDocument(
+  satirlar: KesifSatiri[],
+  projeKodu: string,
+): SurveyDocumentDto {
+  const sections: SurveySectionDto[] = []
+  let aktifBolum: SurveySectionDto | null = null
+
+  satirlar.forEach((s, index) => {
+    const rowNo = index + 5
+    if (s.seviye === 1) {
+      aktifBolum = {
+        sourceRow: rowNo,
+        code: s.pozNo || String(sections.length + 1).padStart(2, '0'),
+        title: s.pozTanimi,
+        brands: s.markaModel ?? '',
+        depth: 1,
+        heading: s.aciklama ?? null,
+        notes: [],
+        items: [],
+      }
+      sections.push(aktifBolum)
+      return
+    }
+
+    if (!aktifBolum) {
+      aktifBolum = {
+        sourceRow: rowNo,
+        code: '01',
+        title: 'GENEL İMALAT KALEMLERİ',
+        brands: '',
+        depth: 1,
+        heading: null,
+        notes: [],
+        items: [],
+      }
+      sections.push(aktifBolum)
+    }
+
+    const miktar = s.miktar ?? 0
+    const malzemeBirim = s.malzeme ?? null
+    const iscilikBirim = s.iscilik ?? null
+    const ggkBirim = s.ggk ?? null
+    const birimFiyat =
+      s.birimFiyat ??
+      (malzemeBirim != null || iscilikBirim != null || ggkBirim != null
+        ? (malzemeBirim ?? 0) + (iscilikBirim ?? 0) + (ggkBirim ?? 0)
+        : null)
+
+    aktifBolum.items.push({
+      sourceRow: rowNo,
+      code: s.pozNo,
+      description: s.pozTanimi,
+      brands: s.markaModel ?? '',
+      unit: s.birim || null,
+      quantity: miktar,
+      materialUnitPriceUsd: malzemeBirim,
+      materialTotalUsd: malzemeBirim != null ? malzemeBirim * miktar : null,
+      laborUnitPriceTl: iscilikBirim,
+      laborTotalTl: iscilikBirim != null ? iscilikBirim * miktar : null,
+      materialGgkarUnitPriceUsd: ggkBirim,
+      materialGgkarTotalUsd: ggkBirim != null ? ggkBirim * miktar : null,
+      laborGgkarUnitPriceTl: null,
+      laborGgkarTotalTl: null,
+      totalUsd: null,
+      totalTl: birimFiyat != null ? birimFiyat * miktar : null,
+      heading: s.aciklama ?? null,
+      notes: [],
+    })
+  })
+
+  const tumKalemler = sections.flatMap((sec) => sec.items)
+  const sumNullable = (vals: Array<number | null | undefined>) => {
+    const valid = vals.filter((v): v is number => typeof v === 'number' && !Number.isNaN(v))
+    return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) : null
+  }
+
+  const computedTotals: SurveyTotalsDto = {
+    row: null,
+    materialTotalUsd: sumNullable(tumKalemler.map((i) => i.materialTotalUsd)),
+    laborTotalTl: sumNullable(tumKalemler.map((i) => i.laborTotalTl)),
+    materialGgkarTotalUsd: sumNullable(tumKalemler.map((i) => i.materialGgkarTotalUsd)),
+    laborGgkarTotalTl: null,
+    totalUsd: null,
+    totalTl: sumNullable(tumKalemler.map((i) => i.totalTl)),
+  }
+
+  return {
+    sheetName: 'Keşif',
+    projectName: projeKodu || 'ARK İNŞAAT PROJESİ',
+    documentTitle: 'KEŞİF VE METRAJ LİSTESİ',
+    disciplineTitle: 'İHALE PAKETİ KEŞİF TABLOSU',
+    headerRow: 4,
+    sections,
+    totals: computedTotals,
+    computedTotals,
+    warnings: [],
+  }
+}
+
+function blobIndir(blob: Blob, dosyaAdi: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = dosyaAdi
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+/** Standart "Excel Keşif" çalışma dosyasını Ark.Excel üzerinden indirir */
+export async function kesifSablonuIndir() {
+  try {
+    const res = await fetch(`${EXCEL_API_BASE}/template`)
+    if (res.ok) {
+      const blob = await res.blob()
+      blobIndir(blob, 'Excel_Kesif_Calisma_Dosyasi.xlsx')
+      return
+    }
+  } catch {
+    // Backend erişilemezse yerel şablon üretimine düş
+  }
+
   const ornekSatir = [
     '01',
     'KABA YAPI İŞLERİ',
@@ -73,8 +371,180 @@ export function kesifSablonuIndir() {
   XLSX.writeFile(wb, 'Excel_Kesif_Calisma_Dosyasi.xlsx')
 }
 
-/** Excel/CSV dosyasını okur ve doğrular */
+/* ----------------------- İçe Aktarma Sihirbazı API ----------------------- */
+
+export type SurveyRoleInfo = { key: string; label: string; required: boolean }
+
+export type SurveySheetPreview = {
+  name: string
+  rowCount: number
+  columnCount: number
+  /** Tahmin edilen başlık satırı (1 tabanlı); 0 = bulunamadı */
+  suggestedHeaderRow: number
+  detectedColumnCount: number
+  /** 1 tabanlı sütun numarası → rol anahtarı */
+  suggestedColumnMap: Record<string, string>
+  rows: string[][]
+  truncated: boolean
+}
+
+export type SurveyWorkbookPreview = {
+  sheets: SurveySheetPreview[]
+  suggestedSheet?: string | null
+  roles: SurveyRoleInfo[]
+}
+
+export type SurveyImportOptions = {
+  sheetName: string
+  /** 0 = başlık satırı yok */
+  headerRow: number
+  firstDataRow: number
+  lastDataRow: number | null
+  /** "1:code,2:description" biçiminde sütun eşlemesi */
+  columnMap: string
+}
+
+/** Ark.Excel servisinden dönen, kullanıcıya gösterilebilir hata */
+export class ExcelServisHatasi extends Error {
+  readonly kod?: string
+  readonly erisilemedi: boolean
+
+  constructor(mesaj: string, opts?: { kod?: string; erisilemedi?: boolean }) {
+    super(mesaj)
+    this.name = 'ExcelServisHatasi'
+    this.kod = opts?.kod
+    this.erisilemedi = opts?.erisilemedi ?? false
+  }
+}
+
+async function excelIstegi<T>(path: string, file: File): Promise<T> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  let response: Response
+  try {
+    response = await fetch(`${EXCEL_API_BASE}${path}`, { method: 'POST', body: formData })
+  } catch {
+    throw new ExcelServisHatasi(
+      'Ark.Excel servisine ulaşılamadı. Servisin çalıştığından emin olup tekrar deneyin.',
+      { erisilemedi: true },
+    )
+  }
+
+  if (!response.ok) {
+    // Geliştirme proxy'si / ağ geçidi servis kapalıyken 502-504 döner
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      throw new ExcelServisHatasi(
+        'Ark.Excel servisine ulaşılamadı. Servisin çalıştığından emin olup tekrar deneyin.',
+        { erisilemedi: true },
+      )
+    }
+    const govde = (await response.json().catch(() => null)) as
+      | { error?: { code?: string; message?: string }; code?: string; message?: string; detail?: string; title?: string }
+      | null
+    const kod = govde?.error?.code ?? govde?.code
+    const mesaj =
+      govde?.error?.message ??
+      govde?.message ??
+      govde?.detail ??
+      govde?.title ??
+      `Ark.Excel servisi isteği reddetti (HTTP ${response.status}).`
+    throw new ExcelServisHatasi(mesaj, { kod, erisilemedi: response.status >= 500 })
+  }
+
+  return (await response.json()) as T
+}
+
+/** Sihirbazın 1-3. adımları: dosyanın sayfaları, ham satırları ve tahmin edilen başlık/eşleme */
+export function kesifOnizle(file: File): Promise<SurveyWorkbookPreview> {
+  return excelIstegi<SurveyWorkbookPreview>('/preview', file)
+}
+
+/** Sihirbazın son adımı: seçilen sayfa/aralık/sütun eşlemesi ile Ark.Excel ayrıştırması */
+export function kesifEslemeIleIceAktar(
+  file: File,
+  opts: SurveyImportOptions,
+): Promise<SurveyDocumentDto> {
+  const q = new URLSearchParams()
+  if (opts.sheetName) q.set('sheetName', opts.sheetName)
+  q.set('headerRow', String(opts.headerRow))
+  q.set('firstDataRow', String(opts.firstDataRow))
+  if (opts.lastDataRow != null) q.set('lastDataRow', String(opts.lastDataRow))
+  if (opts.columnMap) q.set('columnMap', opts.columnMap)
+  return excelIstegi<SurveyDocumentDto>(`/import?${q.toString()}`, file)
+}
+
+/**
+ * Excel dosyasını Ark.Excel backend kütüphanesi (/api/excel/survey/import) ile okur ve doğrular.
+ * Backend servisine ulaşılamazsa yerel okuyucuya geri döner.
+ */
 export async function kesifDosyasiOku(file: File): Promise<ImportSonucu> {
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(`${EXCEL_API_BASE}/import`, {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (response.ok) {
+      const belge = (await response.json()) as SurveyDocumentDto
+      const satirlar = surveyDocumentToKesifSatirlari(belge)
+      const hatalar: ImportHatasi[] = (belge.warnings ?? []).map((w) => ({
+        satir: w.row ?? 0,
+        alan: w.code,
+        mesaj: w.message,
+        tip: 'uyari',
+      }))
+
+      if (satirlar.length === 0) {
+        hatalar.push({
+          satir: 0,
+          alan: 'Tablo',
+          mesaj: 'Excel dosyasında içe aktarılabilecek keşif satırı bulunamadı.',
+          tip: 'hata',
+        })
+      }
+
+      return {
+        satirlar,
+        hatalar,
+        dosyaAdi: file.name,
+        kaynak: 'ark-excel',
+        belge,
+      }
+    }
+
+    if (response.status >= 400 && response.status < 500) {
+      const errBody = (await response.json().catch(() => null)) as
+        | { error?: { code?: string; message?: string } }
+        | null
+      return {
+        satirlar: [],
+        hatalar: [
+          {
+            satir: 0,
+            alan: errBody?.error?.code || 'Ark.Excel',
+            mesaj:
+              errBody?.error?.message ||
+              'Excel dosyası Ark.Excel kütüphanesi tarafından ayrıştırılamadı.',
+            tip: 'hata',
+          },
+        ],
+        dosyaAdi: file.name,
+        kaynak: 'ark-excel',
+      }
+    }
+  } catch {
+    // Backend çevrimdışı ise yerel ayrıştırıcı ile devam et
+  }
+
+  return kesifDosyasiYerelOku(file)
+}
+
+/** Yerel (tarayıcı içi) yedek Excel okuyucu */
+async function kesifDosyasiYerelOku(file: File): Promise<ImportSonucu> {
   const buffer = await file.arrayBuffer()
   const wb = XLSX.read(buffer, { type: 'array' })
   const ilkSayfa = wb.SheetNames[0]
@@ -95,7 +565,7 @@ export async function kesifDosyasiOku(file: File): Promise<ImportSonucu> {
     }
   }
   if (hatalar.length > 0) {
-    return { satirlar: [], hatalar, dosyaAdi: file.name }
+    return { satirlar: [], hatalar, dosyaAdi: file.name, kaynak: 'yerel' }
   }
 
   const satirlar: KesifSatiri[] = []
@@ -113,7 +583,14 @@ export async function kesifDosyasiOku(file: File): Promise<ImportSonucu> {
     const miktarHam = oku('Miktar')
     const kirilim = oku('Teklif Kırılımı')
     const seviyeHam = oku('Seviye')
-    const seviye = seviyeHam === '1' ? 1 : seviyeHam === '3' ? 3 : 2
+    const seviye =
+      seviyeHam === '1'
+        ? 1
+        : seviyeHam === '3'
+          ? 3
+          : !birim && (!miktarHam || Number(miktarHam.replace(',', '.')) === 0)
+            ? 1
+            : 2
 
     if (!pozTanimi) {
       hatalar.push({ satir: satirNo, alan: 'Poz Tanımı', mesaj: 'Poz tanımı boş bırakılamaz.', tip: 'hata' })
@@ -134,15 +611,16 @@ export async function kesifDosyasiOku(file: File): Promise<ImportSonucu> {
       })
     }
 
-    const fiyatDoluluk = ['Malzeme Fiyatı', 'İşçilik Fiyatı', 'GGK Fiyatı'].filter((f) => oku(f) !== '')
-    if (fiyatDoluluk.length > 0) {
-      hatalar.push({
-        satir: satirNo,
-        alan: fiyatDoluluk.join(', '),
-        mesaj: 'Fiyat alanları keşif aşamasında doldurulmaz — içe aktarımda boşaltılacaktır.',
-        tip: 'uyari',
-      })
+    const sayiOku = (ad: string): number | undefined => {
+      const ham = oku(ad)
+      if (!ham) return undefined
+      const n = Number(ham.replace(',', '.'))
+      return Number.isNaN(n) ? undefined : n
     }
+
+    const malzeme = sayiOku('Malzeme Fiyatı')
+    const iscilik = sayiOku('İşçilik Fiyatı')
+    const ggk = sayiOku('GGK Fiyatı')
 
     satirlar.push({
       id: `imp-${satirNo}-${Date.now()}`,
@@ -152,16 +630,40 @@ export async function kesifDosyasiOku(file: File): Promise<ImportSonucu> {
       aciklama: oku('Açıklama'),
       birim,
       miktar: Number.isNaN(miktar) ? 0 : miktar,
-      teklifKirilimi: (kirilim || 'Malzeme') as KesifSatiri['teklifKirilimi'],
+      teklifKirilimi: (kirilim || 'Malzeme + İşçilik') as KesifSatiri['teklifKirilimi'],
+      malzeme,
+      iscilik,
+      ggk,
+      birimFiyat:
+        malzeme != null || iscilik != null || ggk != null
+          ? (malzeme ?? 0) + (iscilik ?? 0) + (ggk ?? 0)
+          : undefined,
       markaModel: oku('Marka/Model'),
     })
   })
 
-  return { satirlar, hatalar, dosyaAdi: file.name }
+  return { satirlar, hatalar, dosyaAdi: file.name, kaynak: 'yerel' }
 }
 
-/** Keşif tablosunu Excel'e aktarır */
-export function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string) {
+/** Keşif tablosunu Ark.Excel SurveyExcelExporter ile Excel'e aktarır */
+export async function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string) {
+  const safeCode = (projeKodu || 'proje').replace(/[^a-zA-Z0-9_-]/g, '_')
+  try {
+    const doc = kesifSatirlariToSurveyDocument(satirlar, projeKodu)
+    const res = await fetch(`${EXCEL_API_BASE}/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(doc),
+    })
+    if (res.ok) {
+      const blob = await res.blob()
+      blobIndir(blob, `Kesif_${safeCode}.xlsx`)
+      return
+    }
+  } catch {
+    // Backend erişilemezse yerel dışa aktarıma düş
+  }
+
   const veri = satirlar.map((s) => [
     s.pozNo,
     s.pozTanimi,
@@ -179,5 +681,5 @@ export function kesifDisaAktar(satirlar: KesifSatiri[], projeKodu: string) {
   const ws = XLSX.utils.aoa_to_sheet([[...KESIF_SABLON_BASLIKLARI], ...veri])
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Keşif')
-  XLSX.writeFile(wb, `Kesif_${projeKodu || 'proje'}.xlsx`)
+  XLSX.writeFile(wb, `Kesif_${safeCode}.xlsx`)
 }

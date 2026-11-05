@@ -9,12 +9,15 @@ import { IconButton } from '../../components/ui/Shell'
 import { AKIF_KULLANICI_ID, SANTIYECI_PERSONEL_ID } from '../../data/mock'
 import { useStore } from '../../data/store'
 import type { IhalePaketi } from '../../data/types'
+import { BOS_KESIF, useKesifDogrulama } from '../../lib/kesifDogrulama'
 import { modulYolu } from '../../lib/modul'
 import { IhaleOzeti } from '../packages/IhaleOzeti'
 import { FirmaOnerSekmesi } from '../packages/FirmaOnerSekmesi'
 import { PackageDocumentsTab } from '../packages/PackageDocumentsTab'
 import { PackagePublishModal } from '../packages/PackagePublishModal'
 import { TakeoffTable } from '../packages/TakeoffTable'
+import { yayinKapisiHesapla } from '../../lib/yayinKapisi'
+import { YayinlaDugmesi } from '../packages/YayinKapisi'
 
 /* =================================================================
    ŞANTIYECİ MODÜLÜ — İhale paketi detayı
@@ -34,6 +37,9 @@ export function SantiyeciPackageDetailPage() {
   const paket = id && paketId ? paketGetir(id, paketId) : undefined
   const [sekme, setSekme] = useState('ihale-ozeti')
   const [yayinOnizleme, setYayinOnizleme] = useState(false)
+  // F5: yayın kapısı — kaydedilmiş keşif satırlarının doğrulaması (kurallar backend'de)
+  const kesifDogrulama = useKesifDogrulama(paket?.keşif ?? BOS_KESIF)
+  const yayinKapisi = yayinKapisiHesapla(kesifDogrulama)
 
   /* Erişim — yalnızca şantiyecinin kendi paketleri */
   const erisimVar = paket
@@ -102,9 +108,12 @@ export function SantiyeciPackageDetailPage() {
               Yayında
             </Badge>
           ) : (
-            <Button variant="brand" icon="send" onClick={() => setYayinOnizleme(true)}>
-              Yayınla
-            </Button>
+            <YayinlaDugmesi
+              kapi={yayinKapisi}
+              onYayinla={() => setYayinOnizleme(true)}
+              onKesifeGit={() => setSekme('kesif')}
+              onTekrar={kesifDogrulama.yenile}
+            />
           )}
           <IconButton icon="refresh" label="Geri al" tone="brand" size="lg" />
         </div>
@@ -149,6 +158,11 @@ export function SantiyeciPackageDetailPage() {
       <PackagePublishModal
         open={yayinOnizleme}
         paket={paket}
+        kesifKapisi={yayinKapisi}
+        onKesifeGit={() => {
+          setYayinOnizleme(false)
+          setSekme('kesif')
+        }}
         onClose={() => setYayinOnizleme(false)}
         onYayinla={() => paketYayinla(proje.id, paket.id)}
       />

@@ -107,12 +107,16 @@ veya kural kodu). Onayınız gerekenler işaretli.
 |---|---|---|---|
 | 1 | Birim listesi dosyada yok ("4. sayfadaki liste") | Yaygın inşaat/tesisat birimleriyle varsayılan liste: `m, m², m³, adet, kg, ton, lt, set, takım, kalem, götürü, paket, kutu, top, rulo, çift, saat, gün, ay, nokta, %`. Büyük/küçük harf farksız; `m2→m²`, `mt→m`, `ad→adet` gibi yazımlar düzeltilebilir hata (E02) | ☐ **Gerçek liste gerekli** |
 | 2 | "Pozda miktar > 0" (hata) ile "birim dolu miktar boş" (uyarı) çakışıyor | Miktar boş/≤0 olan poz → **E04 (hata)**. Miktarı dolu ama birimi boş → **W01 (uyarı)** | ☐ |
-| 3 | "Sıra numarası atlanmamış" ama örnek sıra bozukluğu | **E06 = aynı üst başlık altında numaralar artan sırada değil.** Atlama (01.02 → 01.05) hata değil (gerçek BOQ'larda 0010, 0020… adımlar var) | ☐ |
+| 3 | "Sıra numarası atlanmamış" ama örnek sıra bozukluğu | **E06 = aynı üst başlık altında (sayısal) numaralar artan sırada değil.** Atlama (01.02 → 01.05) hata değil (gerçek BOQ'larda 0010, 0020… adımlar var). Ayrıca bkz. #10 | ☐ |
 | 4 | Seviye 4 poz "son basamak 4 hane" ama örnekte `01.02` | **Zorlanmıyor.** Poz/başlık ayrımı numaraya değil birim/miktara bakar; seviye = basamak sayısı | ☐ |
 | 5 | `ISCIK` yazımı | Kod olarak kullanılmadı; model alanı `iscilik` | — |
 | 6 | Kâr % eşiği ve portalda alan yok | Eşik 0–50 (yapılandırılabilir); kural satırda `profitPercent` varsa çalışır. Portal modelinde alan henüz yok → şimdilik tetiklenmez | ☐ |
 | 7 | "Üst satır eksik" otomatik eklenirken başlık metni | Eklenen başlığın açıklaması `BAŞLIK` (kullanıcı düzenler) | ☐ |
 | 8 | Renumber kapsamı | Yalnızca tüm basamakları sayı olan numaralar, belge sırasına göre; basamak genişliği (01, 0010) korunur; `V.6.2` gibi harfli numaralar değişmez | ☐ |
+| 10 | Ekipman etiketleri (`AHU 01`, `KEF 04`, `EF 01`) hiyerarşik numara değil (gerçek SAP dosyası) | **E06 yalnızca son basamağı sayı olan numaralara uygulanır** (`01.02`, `V.9.4`). Etiketler sıralanmaz; aksi halde `EF 01 < KEF 04` gibi yanlış pozitifler çıkıyordu | ☐ |
+| 11 | Portalın kendi dışa aktarması başlıkları `Miktar = 0` ile yazıyor → geri okunurken başlıklar poz sanılıyordu | **Birimsiz ve miktarı 0 olan kodlu satır başlıktır.** Birimi olan sıfır miktarlı satır kalem kalır (E04) | ☐ |
+| 12 | `Maktüen`, `Ad` gibi birim yazımları | `Maktüen`/`maktu` → `götürü`, `Ad` → `adet` düzeltme önerisiyle gelir (E02) | ☐ |
+| 13 | *Yeniden numarala* harfli önekli numaralarda (`V.9.2`) çalışmıyordu | Yalnızca **sırası bozuk kardeş gruplarını** belge sırasına göre numaralar (atlamalar korunur); alt satırlar yeni öneki takip eder; sıfır dolgusu yalnızca dosyada varsa | ☐ |
 | 9 | Başlık seviyeleri portalda "ana grup"a düzleşiyor | Açık: iç içe başlık hiyerarşisi (ve iç içe aç/kapa) istenecek mi? | ☐ |
 
 ---

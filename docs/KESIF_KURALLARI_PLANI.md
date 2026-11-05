@@ -241,3 +241,91 @@ Sıra, bağımlılığa göre. Her madde bağımsız teslim edilebilir.
 - Düzeltmeler **her zaman önizleme + onay** ile mi uygulansın (öneri: evet), yoksa bazıları (birim) tek tıkla mı?
 - Doğrulama **her düzenlemede** mi, yoksa yalnızca "Kaydet" ve "BOQ'u Kontrol Et"te mi çalışsın? (Öneri: her düzenlemede, debounce ile.)
 - Hata varken **Kaydet** serbest mi? (Öneri: evet — yalnızca yayın/geçiş engellenir.)
+
+---
+
+## 8. 05.11 toplantısı — istek planı (B grubu)
+
+Kaynak: 05.11.2026 "Impromptu Teams Meeting" kaydı (spreadsheet / içe aktarma ile ilgili maddeler). Madde numaraları
+konuşmadan çıkarılan listedeki B maddeleridir. Boyut: **S** ≤ yarım gün, **M** 1–2 gün, **L** birkaç gün.
+Not: 06.11 16:00 demosu için yalnızca Faz 0–1 (+ A grubu hatalar) hedeflenir; Faz 3–4 demo sonrası.
+
+### Kod incelemesinden çıkanlar (planı etkileyen)
+
+- `TakeoffTable.tsx` formülleri sütun **harflerine sabit** (`E`, `F`, `G`, `H`, `I`, `J`; ör. `=E7*I7`, `=SUM(J3:J9)`).
+  Sütun eklemek / sırasını değiştirmek (Poz Kodu'nu Poz Tanımı'nın soluna almak dahil) bu harfleri kaydırır →
+  **önce anahtar → harf eşlemesi** kurulmalı (Faz 0, tüm sonraki işlerin ön koşulu).
+- ui-kit `Spreadsheet`: dropdown hücre editörü, sütun düzeyinde salt-okunur, başlıkta formül gösterimi **yok**;
+  sütun ekleme de yok (sütunlar tüketicide üretilir). Sütun ekleme arayüzünü portalda (toolbar + modal) kurmak ui-kit'e
+  dokunmayı azaltır; dropdown ve sütun salt-okunur/ipucu ui-kit'e eklenmeli.
+- `E04` (miktar boş / ≤ 0) zaten var → B24 ek kural gerektirmiyor, yalnızca test.
+  `W02` (fiyat yok) tabloda zaten yoksayılıyor (`KESIF_ASAMASINDA_YOKSAYILAN_KODLAR`); sihirbaz özetinde de aynı filtre kullanılmalı (kontrol edilecek).
+- Düzelt önizleme modalı (`DuzeltOnizlemeModal`) "Yeni" değerini salt metin gösteriyor; düzenleme yok.
+- ui-kit varsayılan etiketleri aksansız ("Sifirla", "Bolumleri kapat", "Yazdir", "Satir ekle"); portal etiketleri geçirmiyor.
+- Şablon (`/template`, yerel yedek `KESIF_SABLON_BASLIKLARI`) eski yapıda; Level / Poz Kodu / kurallar yok.
+- Level numarası (01.01.0010) ile **Poz Kodu** (AHU 01, ÖBF2) ayrı kavram: Level hiyerarşi, Poz Kodu kimlik (`kaynakKodu`).
+
+### Faz 0 — Önkoşul + adlandırma (S–M, demo öncesi)
+
+| # | İş | Dosya / yer | Boyut |
+|---|----|-------------|-------|
+| 0.1 | Sütun **anahtar → harf** yardımcısı; tüm formüller (`E..J`, `'Keşif Metrajı'!E…`) bundan üretilir | `TakeoffTable.tsx` | S |
+| 0.2 | **Poz Kodu** (eski "Kaynak Kod") **Level'dan sonra, Poz Tanımı'ndan önce**; sihirbaz önizleme / dışa aktarma / şablon başlıkları "Poz Kodu" (B19) | `TakeoffTable.tsx`, `ImportWizard.tsx`, `kesif.ts` | S |
+| 0.3 | Sekme adları: `Keşif Metrajı` → **Detay**, `Bölüm Özeti` → **İcmal** (özet formüllerindeki sayfa adı sabitlenmeden sabitten üretilir) (B26) | `TakeoffTable.tsx` | S |
+| 0.4 | Etiketler: portal doğru Türkçe `labels` geçirir; ui-kit varsayılanları da düzeltilir (Yazdır, Satır ekle, Sıfırla, Bölümleri kapat…); "BOQ'u Kontrol Et" → "Keşfi Kontrol Et"; UI genelinde İngilizce metin taraması (B27) | `TakeoffTable.tsx`, ui-kit `Spreadsheet.tsx` | S |
+| 0.5 | Küçük ekranda pencere/sihirbaz **kapatma (X)** görünürlüğü kontrolü (B28; büyük ihtimalle ekran paylaşımı kaynaklı, kod hatası değil) | `Modal` | S |
+
+Kabul: tablo harf kaydırmasına rağmen aynı toplamları verir (mevcut test + yeni); sekme/etiket metinleri Türkçe.
+
+### Faz 1 — Kurallar (backend + küçük arayüz) (S–M, demo öncesi mümkün)
+
+- **1.1 (B24)** "Birim varsa miktar zorunlu": `E04` zaten karşılıyor (boş / ≤ 0) → yalnızca test eklenir; geri çekilen "fiyat sütunlarından biri dolu olsun" kuralı **uygulanmaz**.
+- **1.2 (B25)** Sihirbaz özetinde `W02` (ve gerekirse `W03`) keşif aşamasında gizlenir; tek sabit hem tabloda hem sihirbazda kullanılır.
+- **1.3 (B20)** Poz Kodu kuralları (Level modunda E01/E06 devre dışı olduğu için şu an hiçbiri çalışmıyor):
+  - `E08` Poz kodu boş (yalnızca poz satırlarında — başlık için isteğe bağlı; **karar D2**),
+  - `E09` Poz kodu **paket içinde** tekrar ediyor (kapsam = ihale paketi; proje / global değil),
+  - düzeltme: "Poz kodlarını doldur" (önek + sıra; bkz. 4.1). İçe aktarmada kaynak kod yoksa otomatik üretilir, içe aktarmayı engellemez.
+  - Yayın kapısı: E08/E09 hata olarak kapıya girer (**karar D3**).
+
+### Faz 2 — Düzelt ve içe aktarma deneyimi (M)
+
+- **2.1 (B8, B9)** Düzelt önizlemesinde "Yeni" hücresi düzenlenebilir: birim için `/reference` birim listesinden dropdown, diğer alanlar metin. Onaylanan değerler `duzeltmeyiUygula`'ya geçer; sonra yeniden doğrulama. Backend'de birim eşanlamlıları genişletilir (kübik metre, square meter, metre kare, m2/m3, mt/mtül, ad…) + test.
+- **2.2 (B12)** Doğrulama şeridinde **önceki / sonraki sorun** düğmeleri; bir sorun düzelince sıradakine geçiş (isteğe bağlı ayar).
+- **2.3 (B11)** Sihirbaz "Aralık" adımında önizleme tablosundan tıklayarak başlık satırı / veri aralığı seçimi (L değil, M; demo sonrası olabilir).
+
+### Faz 3 — Tablo: başlık satırları, dropdown, sütun formülü, özel sütunlar (L, demo sonrası)
+
+- **3.1 (B5)** Başlık satırlarında Miktar / Malzeme / İşçilik / GGK **kaldırılır**; yalnızca **Toplam Tutar** (alt toplam). İcmal'deki "Toplam Miktar" sütunu kalkar; genel toplam satırında yalnızca tutar. Etkilenen: `kesifSheetsOlustur`, `altAgacSonu` kullanımı, testler.
+- **3.2 (B10)** ui-kit: `SpreadsheetColumn.options?: string[]` (+ `strictOptions`). Birim sütunu tanımlı birimlerden dropdown; listede olmayan **yapıştırılan** değer reddedilmez, `E02` ile işaretlenir (veri kaybı yok).
+- **3.3 (B14)** ui-kit: `SpreadsheetColumn.readOnly` ve başlıkta formül ipucu (`formulaHint`, ör. "Miktar × Birim Fiyat"). Hesaplanan sütunlar (Birim Fiyat, Toplam Tutar) sütun düzeyinde salt-okunur; formül başlıkta görünür, hücre bazında düzenlenmez.
+- **3.4 (B15–B18)** Özel sütunlar — veri modeli ve hesap:
+  - Paket düzeyinde `kesifSutunlari: { key, baslik, tur: 'maliyet' | 'katsayi', hedef }[]`; satırda `ekDegerler: Record<key, number>` (alanlar opsiyonel → eski kayıtlar bozulmaz).
+  - **maliyet** sütunu (örn. Nakliye): Birim Fiyat toplamına otomatik dahil olur.
+  - **katsayı** sütunu (örn. Fittings): boş = 1; **hemen solundaki sütunu** çarpar; Birim Fiyat'ın hemen solundaysa maliyet toplamını çarpar (Birim Fiyat = (Σ maliyet) × katsayı). İşçilik yanına konunca yalnızca işçilik çarpılır (yıllık işçilik artışı senaryosu).
+  - Formül, sütun sırasından **tek yerden** üretilir (hücre bazında formül yok — Nevin'in "başlık bazında" isteği); başlıkta gösterilir (3.3).
+  - Arayüz: toolbar'da **Sütun ekle** (portalda modal): ad, tür, "şu sütunun sağına"; ön tanımlı liste (Nakliye, Fittings…) + özel ad. ui-kit'e sütun ekleme API'si gerekmez.
+  - Dışa aktarma: ek sütunlar düz sütun olarak yazılır. İçe aktarma rolleri için bkz. 4.3.
+
+### Faz 4 — Sonraki (L, ayrı planlanır)
+
+- **4.1 (B21, B22)** Poz kodu üretim stili: sihirbaz / tabloda "boşsa otomatik üret" (önek + başlangıç + hane; ör. `AHU 01`, `ÖBF 1`); önek her seferinde değişmez (paket ayarı). Alfabetik / numerik stil seçeneği (Hilal). İşveren kodu için isteğe bağlı "Eski / İşveren Kodu" alanı.
+- **4.2** Level değişince alt satırların taşınması ve başlık silme davranışı (A grubu #4 ile birlikte).
+- **4.3** Ark.Excel'de özel sütun rolleri (`extraCost`, `factor`): `ColumnMap` şu an rol başına tek sütun tutuyor → çoklu sütun rolü için tasarım gerekir.
+- **4.4 (B13)** Şablon: yeni sütun yapısı (Level, Poz Kodu, Poz Tanımı…), **Kurallar** sayfası (Level 1–9, C = yorum, birim listesi, miktar > 0, poz kodu benzersiz), Birim ve Level için Excel veri doğrulama (dropdown), örnek satırlar. Backend şablon üretici + yerel yedek birlikte güncellenir. *(Faz 0.2'den sonra hemen yapılabilir; S–M.)*
+
+### Karar gerekenler
+
+- **D1** Poz Kodu tabloda elle eklenen satırlarda da düzenlenebilir mi? (Öneri: evet; içe aktarmadan gelen salt-okunur değil.)
+- **D2** E08: poz kodu yalnızca pozlarda mı zorunlu, başlıklarda da mı? (Öneri: yalnızca pozlarda.)
+- **D3** E08/E09 yayın kapısını kapatsın mı? (Öneri: evet, hata.)
+- **D4** Tabloda serbest metin birim: reddet mi, işaretle mi? (Öneri: işaretle — veri kaybı yok.)
+- **D5** Toplam Tutar kesinlikle salt-okunur; Birim Fiyat: maliyet kırılımı boşsa elle girilebilir kalsın mı? (Öneri: evet, bugünkü davranış.)
+- **D6** Katsayı / formül girişi: yapısal seçim (tür + konum) mi, serbest formül mü? Serbest formülde **A1 adresi yerine `[Malzeme]*[Fittings]`** gibi sütun adı kullanılmalı — sütun eklenince harfler kayar. (Öneri: V1 yapısal, serbest formül sonra.)
+- **D7** Poz kodu paket içinde mi, proje içinde mi benzersiz? Toplantı: paket içinde (öneri: paket).
+- **D8** "Bölümleri kapat/aç" yeni adı? (Öneri: "Tümünü daralt / Tümünü genişlet"; kayıttan kesin ifade anlaşılmadı.)
+
+### Risk / bağımlılıklar
+
+- ui-kit `Spreadsheet` dizini hâlâ işlenmemiş (kullanıcının untracked çalışması): Faz 0.4 / 3.2 / 3.3 değişiklikleri bu dizine yazar; commit'i ayrı verilmeli.
+- Faz 0.1 olmadan Faz 0.2 ve Faz 3 güvenle yapılamaz (formül kayması).
+- Kaydedilmiş paketlerde yeni alanlar opsiyonel tutulur; Poz Kodu sütun yeri değişimi veri göçü gerektirmez.

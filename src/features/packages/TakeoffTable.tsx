@@ -26,6 +26,7 @@ import {
 import type { AktarimModu } from '../../lib/kesifImport'
 import {
   LEVEL_MAX,
+  LEVEL_MIN,
   baslikMi,
   levelDegeri,
   levelHucresiCozumle,
@@ -73,6 +74,27 @@ function altAgacSonu(liste: KesifSatiri[], idx: number): number {
   let son = idx
   while (son + 1 < liste.length && (liste[son + 1].yorum || levelDegeri(liste[son + 1]) > level)) son += 1
   return son
+}
+
+/**
+ * Tek bir satırın Level'ı değiştiğinde alt ağacı aynı farkla taşır (Level'lar mutlaktır; aksi halde alt satırlar
+ * yanlış başlığa bağlanır). Taşınan Level 1–9 dışına çıkacaksa değişiklik geri alınır (satır eski Level'ına döner).
+ */
+function altAgaciniTasi(eski: KesifSatiri[], yeni: KesifSatiri[], idx: number): KesifSatiri[] {
+  const eskiLevel = levelDegeri(eski[idx])
+  const fark = levelDegeri(yeni[idx]) - eskiLevel
+  const son = altAgacSonu(eski, idx)
+  const sonuc = [...yeni]
+  for (let j = idx + 1; j <= son; j += 1) {
+    if (sonuc[j].yorum) continue
+    const level = levelDegeri(eski[j]) + fark
+    if (level < LEVEL_MIN || level > LEVEL_MAX) {
+      sonuc[idx] = { ...sonuc[idx], level: eskiLevel }
+      return sonuc
+    }
+    sonuc[j] = { ...sonuc[j], level }
+  }
+  return sonuc
 }
 
 /**
@@ -514,8 +536,14 @@ export function TakeoffTable({
       }
     })
 
-    setSatirlar(yeni)
-    setSheets(durum.yapiDegisti ? kesifSheetsOlustur(yeni, goster) : nextSheets)
+    // Tek satırın Level'ı değiştiyse alt satırları da taşınır
+    const levelDegisen = yeni.flatMap((s, i) =>
+      !s.yorum && !satirlar[i].yorum && levelDegeri(s) !== levelDegeri(satirlar[i]) ? [i] : [],
+    )
+    const sonuc = levelDegisen.length === 1 ? altAgaciniTasi(satirlar, yeni, levelDegisen[0]) : yeni
+
+    setSatirlar(sonuc)
+    setSheets(durum.yapiDegisti ? kesifSheetsOlustur(sonuc, goster) : nextSheets)
   }
 
   /** Bir satırın ardışık yorum/devam satırlarının bittiği indeks (dahil); yorum yoksa satırın kendisi */
@@ -594,7 +622,13 @@ export function TakeoffTable({
       if (idx === -1) return prev
       // Bir pozu silerken ona bağlı yorum/devam satırları da silinir
       const son = yorumlarinSonu(prev, idx)
-      const klon = prev.filter((_, i) => i < idx || i > son)
+      // Başlık silinirse altındaki satırlar bir üst seviyeye çıkar (silinen başlığın üstüne bağlanır, kaybolmaz)
+      const altSon = baslikMi(prev[idx]) ? altAgacSonu(prev, idx) : son
+      const klon = prev
+        .map((s, i) =>
+          i > son && i <= altSon && !s.yorum ? { ...s, level: Math.max(LEVEL_MIN, levelDegeri(s) - 1) } : s,
+        )
+        .filter((_, i) => i < idx || i > son)
       setSheets(kesifSheetsOlustur(klon, goster))
       return klon
     })

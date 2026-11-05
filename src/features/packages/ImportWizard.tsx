@@ -61,7 +61,7 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
   const [onizleme, setOnizleme] = useState<SurveyWorkbookPreview | null>(null)
   const [sayfaAdi, setSayfaAdi] = useState('')
   const [ayar, setAyar] = useState<IceAktarAyar | null>(null)
-  const [mod, setMod] = useState<AktarimModu>(mevcutSatirSayisi > 0 ? 'ekle' : 'degistir')
+  const [mod, setMod] = useState<AktarimModu>('degistir')
   const [okunuyor, setOkunuyor] = useState(false)
   const [dosyaHatasi, setDosyaHatasi] = useState('')
   const [belge, setBelge] = useState<SurveyDocumentDto | null>(null)

@@ -267,12 +267,13 @@ export type KesifSatiri = {
 /**
  * Keşif tablosuna eklenen özel sütun. `maliyet`: Birim Fiyat toplamına eklenir (ör. Nakliye).
  * `katsayi`: hemen solundaki sütunu çarpar; Birim Fiyat'ın hemen solundaysa maliyet toplamını çarpar
- * (ör. Fittings 1,5; boş = 1). `metin`: fiyatı etkilemeyen serbest metin (ör. İşveren Kodu); Marka / Model'den sonra gelir.
+ * (ör. Fittings 1,5; boş = 1). `metin`: fiyatı etkilemeyen serbest metin (ör. İşveren Kodu); Marka / Model'den sonra gelir. `sayi`: fiyatı etkilemeyen sayı
+ * (ör. bina bazlı alt miktar); Miktar'dan sonra gelir ve Miktar formülünde kullanılabilir.
  */
 export type KesifEkSutun = {
   key: string
   baslik: string
-  tur: 'maliyet' | 'katsayi' | 'metin'
+  tur: 'maliyet' | 'katsayi' | 'metin' | 'sayi'
   /** Hangi sütunun sağına yerleştirildiği (Malzeme / İşçilik / GGK ya da başka bir özel sütun) */
   sonra: string
 }

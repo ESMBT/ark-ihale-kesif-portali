@@ -36,7 +36,8 @@ const SABIT_MALIYET: SpreadsheetColumn[] = [
 
 /** Özel sütunları `sonra` bağlantılarına göre sıralayarak maliyet bölgesinin sütun anahtarlarını verir */
 export function maliyetBolgesi(tumEk: KesifEkSutun[]): string[] {
-  const ek = tumEk.filter((e) => e.tur !== 'metin')
+  // Metin ve sayı sütunları fiyatı etkilemez: maliyet bölgesinde yer almaz
+  const ek = tumEk.filter((e) => e.tur !== 'metin' && e.tur !== 'sayi')
   const sira: string[] = MALIYET_SUTUNLARI.map((k) => k)
   const bekleyen = [...ek]
   // Her özel sütun, `sonra` sütununun hemen sağına girer (birden çok sütun aynı yere eklendiyse eklenme sırasıyla)
@@ -64,7 +65,10 @@ export function kesifSutunlari(ek: KesifEkSutun[] = [], ozel: KesifSutunFormulle
   const metinSutunlari: SpreadsheetColumn[] = ek
     .filter((e) => e.tur === 'metin')
     .map((e) => ({ key: e.key, title: e.baslik, width: 140, align: 'left', description: 'Ek metin sütunu (fiyatı etkilemez)' }))
-  for (const e of ek.filter((x) => x.tur !== 'metin')) {
+  const sayiSutunlari: SpreadsheetColumn[] = ek
+    .filter((e) => e.tur === 'sayi')
+    .map((e) => ({ key: e.key, title: e.baslik, width: 120, align: 'right', format: 'number', description: 'Ek sayı sütunu (fiyatı etkilemez)' }))
+  for (const e of ek.filter((x) => x.tur === 'maliyet' || x.tur === 'katsayi')) {
     tanim.set(e.key, {
       key: e.key,
       title: e.baslik,
@@ -76,10 +80,17 @@ export function kesifSutunlari(ek: KesifEkSutun[] = [], ozel: KesifSutunFormulle
   }
   const maliyet = maliyetBolgesi(ek).map((k) => tanim.get(k)).filter((c): c is SpreadsheetColumn => !!c)
   const markaKonumu = SABIT_ONCESI.findIndex((c) => c.key === 'markaModel') + 1
+  const miktarKonumu = SABIT_ONCESI.findIndex((c) => c.key === 'miktar') + 1
+  // Miktar sütun formülü girildiyse hücreler hesaplanır (ör. alt miktarların toplamı) ve düzenlenemez
+  const oncesi = SABIT_ONCESI.map((c) =>
+    c.key === 'miktar' && ozel.miktar ? { ...c, readOnly: true, formulaHint: `= ${ozel.miktar}` } : c,
+  )
   return [
-    ...SABIT_ONCESI.slice(0, markaKonumu),
+    ...oncesi.slice(0, markaKonumu),
     ...metinSutunlari,
-    ...SABIT_ONCESI.slice(markaKonumu),
+    ...oncesi.slice(markaKonumu, miktarKonumu),
+    ...sayiSutunlari,
+    ...oncesi.slice(miktarKonumu),
     ...maliyet,
     {
       key: 'birimFiyat',
@@ -210,7 +221,7 @@ export function ekSutunlariBirlestir(
       key,
       baslik: g.baslik,
       tur: g.tur,
-      sonra: g.tur === 'metin' ? '' : sabit ? g.sonra : (harita[g.sonra] ?? 'ggk'),
+      sonra: g.tur === 'metin' || g.tur === 'sayi' ? '' : sabit ? g.sonra : (harita[g.sonra] ?? 'ggk'),
     })
   }
   return { birlesik, harita }
@@ -232,7 +243,7 @@ function altKalemler(satirlar: KesifSatiri[], idx: number): KesifSatiri[] {
 /** Dışa aktarılan tablonun backend isteği (`POST /export-table`) */
 export type DisaAktarimIstegi = {
   title: string
-  extraColumns: Array<{ key: string; title: string; kind: 'cost' | 'factor' | 'text' }>
+  extraColumns: Array<{ key: string; title: string; kind: 'cost' | 'factor' | 'text' | 'number' }>
   rows: Array<{
     level?: number
     comment?: boolean
@@ -259,15 +270,12 @@ export function disaAktarimIstegi(
 ): DisaAktarimIstegi {
   const birimFiyatiOf = (s: KesifSatiri): number | undefined => {
     const maliyetVar =
-      Boolean(ozel.birimFiyat) ||
-      s.malzeme != null ||
-      s.iscilik != null ||
-      s.ggk != null ||
-      Object.keys(s.ekDegerler ?? {}).length > 0
+      Boolean(ozel.birimFiyat) || s.malzeme != null || s.iscilik != null || s.ggk != null || fiyatEtkileyenEkVar(s, ek)
     return maliyetVar ? kalemBirimFiyati(s, ek, ozel) : s.birimFiyat
   }
   const sirali = [
     ...ek.filter((e) => e.tur === 'metin'),
+    ...ek.filter((e) => e.tur === 'sayi'),
     ...maliyetBolgesi(ek)
       .map((k) => ek.find((e) => e.key === k))
       .filter((e): e is KesifEkSutun => !!e),
@@ -277,7 +285,7 @@ export function disaAktarimIstegi(
     extraColumns: sirali.map((e) => ({
       key: e.key,
       title: e.baslik,
-      kind: e.tur === 'maliyet' ? 'cost' : e.tur === 'katsayi' ? 'factor' : 'text',
+      kind: e.tur === 'maliyet' ? 'cost' : e.tur === 'katsayi' ? 'factor' : e.tur === 'sayi' ? 'number' : 'text',
     })),
     rows: satirlar.map((s, i) => {
       if (s.yorum) return { comment: true, description: s.pozTanimi }
@@ -298,7 +306,7 @@ export function disaAktarimIstegi(
         description: s.pozTanimi,
         brand: s.markaModel,
         unit: s.birim,
-        quantity: s.miktar,
+        quantity: kalemMiktari(s, ek, ozel),
         material: s.malzeme,
         labor: s.iscilik,
         ggk: s.ggk,
@@ -313,7 +321,8 @@ export function disaAktarimIstegi(
 /** Dışa aktarım isteğini (backend erişilemezse yerel dosya için) başlık + satır dizisine çevirir; backend ile aynı düzen */
 export function disaAktarimTablosu(istek: DisaAktarimIstegi): Array<Array<string | number>> {
   const metin = istek.extraColumns.filter((c) => c.kind === 'text')
-  const sayisal = istek.extraColumns.filter((c) => c.kind !== 'text')
+  const sayilar = istek.extraColumns.filter((c) => c.kind === 'number')
+  const sayisal = istek.extraColumns.filter((c) => c.kind === 'cost' || c.kind === 'factor')
   const baslik = [
     'Level',
     'Poz Kodu',
@@ -322,6 +331,7 @@ export function disaAktarimTablosu(istek: DisaAktarimIstegi): Array<Array<string
     ...metin.map((c) => `${c.title} (metin)`),
     'Birim',
     'Miktar',
+    ...sayilar.map((c) => `${c.title} (sayı)`),
     'Malzeme',
     'İşçilik',
     'GGK',
@@ -341,6 +351,7 @@ export function disaAktarimTablosu(istek: DisaAktarimIstegi): Array<Array<string
           ...metin.map((c) => deger(r.extras?.[c.key])),
           deger(r.unit),
           deger(r.quantity),
+          ...sayilar.map((c) => deger(r.extras?.[c.key])),
           deger(r.material),
           deger(r.labor),
           deger(r.ggk),
@@ -364,7 +375,7 @@ export function disaAktarimTablosu(istek: DisaAktarimIstegi): Array<Array<string
 export type KesifSutunFormulleri = Record<string, string>
 
 /** Formülü değiştirilebilen sütunlar */
-export const FORMULLU_SUTUNLAR = ['birimFiyat', 'toplam'] as const
+export const FORMULLU_SUTUNLAR = ['miktar', 'birimFiyat', 'toplam'] as const
 
 export type FormulluSutun = (typeof FORMULLU_SUTUNLAR)[number]
 
@@ -400,8 +411,18 @@ export function varsayilanBirimFiyatFormulu(ek: KesifEkSutun[]): string {
 
 export const VARSAYILAN_TOPLAM_FORMULU = '[Miktar]*[Birim Fiyat]'
 
-/** Bir sütunun geçerli formülü: girilmişse o, yoksa varsayılanı */
+/**
+ * Önerilen Miktar formülü: ek sayı sütunlarının (alt miktarların) toplamı, 2 haneye yuvarlanmış (ROUND(SUM,2));
+ * yoksa boş. Yuvarlama, kaynak dosyalardaki "KEŞİF TOPLAM MİKTAR = ROUND(SUM(...),2)" kuralıyla aynı toplamı verir.
+ */
+export function onerilenMiktarFormulu(ek: KesifEkSutun[]): string {
+  const basliklar = ek.filter((e) => e.tur === 'sayi').map((e) => `[${e.baslik}]`)
+  return basliklar.length > 0 ? `ROUND(${basliklar.join('+')}, 2)` : ''
+}
+
+/** Bir sütunun geçerli formülü: girilmişse o, yoksa varsayılanı (Miktar'ın varsayılanı yoktur: hücreler değerdir) */
 export function etkinFormul(key: FormulluSutun, ek: KesifEkSutun[], ozel: KesifSutunFormulleri = {}): string {
+  if (key === 'miktar') return ozel.miktar ?? onerilenMiktarFormulu(ek)
   return ozel[key] ?? (key === 'birimFiyat' ? varsayilanBirimFiyatFormulu(ek) : VARSAYILAN_TOPLAM_FORMULU)
 }
 
@@ -446,6 +467,7 @@ function formulHesapla(
   const harf = sutunHarfleri(sutunlar)
   const hesaplananlar = new Map<string, string>()
   for (const k of FORMULLU_SUTUNLAR) {
+    if (k === 'miktar' && !ozel.miktar) continue // Miktar formülsüzken bir değerdir
     const c = formulCevir(etkinFormul(k, ek, ozel), sutunlar, harf, 2)
     if (c.hata && k === key) return { hata: c.hata }
     hesaplananlar.set(k, c.formul)
@@ -459,7 +481,10 @@ function formulHesapla(
       const hesap = hesaplananlar.get(sutun.key)
       // Toplam Tutar her zaman, Birim Fiyat yalnızca sütun formülü girilmişse formül hücresi gibi çözülür;
       // diğer sütunlar (ve formülsüz Birim Fiyat) verilen satır değeridir
-      if (hesap !== undefined && (sutun.key === 'toplam' || (sutun.key === 'birimFiyat' && ozel.birimFiyat))) {
+      if (
+        hesap !== undefined &&
+        (sutun.key === 'toplam' || (sutun.key === 'birimFiyat' && ozel.birimFiyat) || (sutun.key === 'miktar' && ozel.miktar))
+      ) {
         return { raw: `=${hesap}` }
       }
       const v = degerler(sutun.key)
@@ -495,6 +520,16 @@ export function birimFiyatSatiri(satir: KesifSatiri, ek: KesifEkSutun[], ozel: K
   return birimFiyatHesapla(satir, ek)
 }
 
+/** Satırda Birim Fiyat'ı etkileyen özel sütun (maliyet / katsayı) değeri var mı? (sayı ve metin sütunları etkilemez) */
+export function fiyatEtkileyenEkVar(satir: KesifSatiri, ek: KesifEkSutun[]): boolean {
+  return ek.some((e) => (e.tur === 'maliyet' || e.tur === 'katsayi') && satir.ekDegerler?.[e.key] != null)
+}
+
+/** Satırın geçerli Miktar'ı: sütun formülü varsa (ör. alt miktarların toplamı) onunla, yoksa girilen değer */
+export function kalemMiktari(satir: KesifSatiri, ek: KesifEkSutun[], ozel: KesifSutunFormulleri = {}): number {
+  return ozel.miktar ? (formulHesapla('miktar', ek, ozel, degerlerOf(satir, ek)).deger ?? 0) : (satir.miktar ?? 0)
+}
+
 /** Kalem satırının geçerli Birim Fiyat'ı: sütun formülü > elle girilen > özel sütun yapısından hesaplanan */
 export function kalemBirimFiyati(satir: KesifSatiri, ek: KesifEkSutun[], ozel: KesifSutunFormulleri = {}): number {
   return ozel.birimFiyat ? birimFiyatSatiri(satir, ek, ozel) : (satir.birimFiyat ?? birimFiyatHesapla(satir, ek))
@@ -512,7 +547,7 @@ export function toplamSatiri(satir: KesifSatiri, ek: KesifEkSutun[], ozel: Kesif
     // Toplam formülü Birim Fiyat'a başvurabilir: değeri doğrudan sağlayarak hesapla
     return formulHesapla('toplam', ek, ozel, (k) => (k === 'birimFiyat' ? bf : degerlerOf(satir, ek)(k))).deger ?? 0
   }
-  return (satir.miktar || 0) * bf
+  return (kalemMiktari(satir, ek, ozel) || 0) * bf
 }
 
 /** Formülü gerçek bir satırla dener (Sütun formülü penceresindeki örnek sonuç) */

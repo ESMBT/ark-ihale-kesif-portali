@@ -367,6 +367,30 @@ birim fiyat ve toplam değer olarak yazılır (Excel formülü değil). Sürekli
   *Alt başlık ekle* (seçili başlığın altına), satır ekle = poz (başlığın altında Level+1), *Yorum satırı ekle*.
 - Açık: boş keşifte yayın kapısı yalnızca arayüzde; sunucu tarafı durum makinesiyle gelecek (§6).
 
+### Bina bazlı keşif düzeni (S4HANA Teklif ve Satınalma, 06.11)
+
+Örnek: `S4HANA Teklif ve Satınalma-REV04_BB 1.xlsx` — Mega Hangar, Refit Hangar, Yemekhane, Yönetim, Güvenlik sayfaları
+(SIRA NO | BÖLÜM NO | POZ NO | İMALATIN CİNSİ | AÇIKLAMALAR / RENK | MARKA / MODEL | DETAY KODU / MAHAL | BİRİM | bina bazlı
+MİKTAR sütunları | KEŞİF TOPLAM MİKTAR | MALZEME / İŞÇİLİK / GGK birim fiyatları | TOPLAM BİRİM FİYAT | TOPLAM TUTAR).
+
+- **Tanıma:** "İMALATIN CİNSİ" → Poz Tanımı, "AÇIKLAMALAR / RENK" → Ek Açıklama, "MALZEME/İŞÇİLİK BİRİM FİYATI", "GENEL GİDER+KAR",
+  "TOPLAM BİRİM FİYAT", "TOPLAM TUTAR" otomatik eşlenir. Çok satırlı ve satır sonlu başlıklar birleştirilir.
+- **SIRA NO + POZ NO ayrı sütun:** SIRA NO hiyerarşi anahtarı ("Level / Poz No"), POZ NO **Poz Kodu** olur (`ColumnRole.Number`).
+  Başlık satırlarındaki `POZ NO = 0` kod sayılmaz; tanımı olmayan satırlar, "GENEL TOPLAM TUTARI …", "KAŞE / İMZA", "NOT #1" gibi
+  dipnotlar başlık/poz olmaz (dipnotlar yorum satırı).
+- **Birden çok miktar sütunu:** "KEŞİF TOPLAM MİKTAR" Miktar olur, bina bazlı sütunlar (MEGA HANGAR MİKTAR, GENEL İLAVE MİKTAR …)
+  **Ek sayı sütunu** (`extraNumber`) olarak aktarılır. Sihirbazda isteğe bağlı: *Miktar'ı alt miktarların toplamı olarak hesapla*
+  (`ROUND(a+b, 2)` sütun formülü; Miktar sütunu formüllü olur). Sütun formülleri artık Miktar'a da girilebilir.
+- **Dinamik eşleme:** yeni roller `extraNumber` (Ek sayı), `extraText`, `extraCost`, `extraFactor` birden çok sütuna verilebilir;
+  sihirbazda **"Eşlenmeyenleri ek sütun yap"** (sayı gibi görünen → Ek sayı, diğerleri → Ek metin). Başlığın sonuna
+  `(metin) (sayı) (maliyet) (katsayı)` eklenen dışa aktarılmış dosyalar otomatik eşlenir.
+- **Çok sayfa:** sayfa kartlarında *Birleştir*: seçilen sayfalar tek keşifte, her sayfa kendi adıyla Level 1 üst başlık olur
+  (`groupUnderRoot`); ek sayfalarda başlık satırı ve eşleme otomatik tespit edilir. Tek sayfa için de "Sayfayı tek bir üst başlık
+  altında topla" seçeneği var.
+- **Doğrulama (gerçek dosya):** beş sayfanın Level 1 toplamları İCMAL ile birebir (Mega 76.899.027,51 · Refit 46.094.021,69 ·
+  Yemekhane 41.375.320,78 · Yönetim 28.715.228,98 · Güvenlik 2.140.401,04; genel 195.224.000,00).
+- Ayrıca: sayfa adındaki sondaki boşluk ("Refit Hangar ") artık sayfa seçimini bozmaz; "0.00" gibi sıfır kodlar boş sayılır.
+
 ### Karar gerekenler
 
 - **D1** Poz Kodu tabloda elle eklenen satırlarda da düzenlenebilir mi? (Öneri: evet; içe aktarmadan gelen salt-okunur değil.)

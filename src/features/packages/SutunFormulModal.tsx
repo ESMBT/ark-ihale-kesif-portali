@@ -11,7 +11,7 @@ import {
   type KesifSutunFormulleri,
 } from '../../lib/kesifSutunlar'
 
-const BASLIK: Record<FormulluSutun, string> = { birimFiyat: 'Birim Fiyat', toplam: 'Toplam Tutar' }
+const BASLIK: Record<FormulluSutun, string> = { miktar: 'Miktar', birimFiyat: 'Birim Fiyat', toplam: 'Toplam Tutar' }
 
 /**
  * Sütun formülü: Birim Fiyat / Toplam Tutar hesabı bir kez girilir, tüm poz satırlarına uygulanır.
@@ -45,6 +45,8 @@ export function SutunFormulModal({
         .filter((c) => typeof c.title === 'string')
         .filter((c) => !['level', 'pozKodu', 'pozTanimi', 'markaModel', 'birim', sutun].includes(c.key as string))
         .filter((c) => !(sutun === 'birimFiyat' && c.key === 'toplam'))
+        // Miktar, Birim Fiyat ve Toplam Tutar'ın girdisidir: onlara başvurmak döngü yaratır
+        .filter((c) => !(sutun === 'miktar' && (c.key === 'birimFiyat' || c.key === 'toplam')))
         .filter((c) => !ekSutunlar.some((e) => e.key === c.key && e.tur === 'metin')),
     [ekSutunlar, formuller, sutun],
   )
@@ -84,14 +86,14 @@ export function SutunFormulModal({
           <Button variant="ghost" onClick={onVazgec}>
             Vazgeç
           </Button>
-          <Button variant="secondary" disabled={!ozelVar && formul === varsayilan} onClick={() => onUygula(null)}>
-            Varsayılana dön
+          <Button variant="secondary" disabled={!ozelVar && (sutun === 'miktar' || formul === varsayilan)} onClick={() => onUygula(null)}>
+            {sutun === 'miktar' ? 'Formülü kaldır' : 'Varsayılana dön'}
           </Button>
           <Button
             variant="brand"
             icon="check"
             disabled={Boolean(hata)}
-            onClick={() => onUygula(formul.trim() === varsayilan ? null : formul.trim())}
+            onClick={() => onUygula(sutun !== 'miktar' && formul.trim() === varsayilan ? null : formul.trim())}
           >
             Uygula
           </Button>
@@ -144,6 +146,8 @@ export function SutunFormulModal({
           <span className="font-mono">ROUND(([Malzeme] + [İşçilik]) * 1.1, 2)</span>.
           {sutun === 'birimFiyat' &&
             ' Bu formül her poz satırında Birim Fiyat’ı hesaplar; elle girilmiş birim fiyatların yerine geçer ve hücreler düzenlenemez olur.'}
+          {sutun === 'miktar' &&
+            ' Örn. alt miktar sütunlarının toplamı: [Mega Hangar Miktar] + [Genel İlave Miktar]. Formül, girilmiş miktarların yerine geçer ve hücreler düzenlenemez olur.'}
         </p>
       </div>
     </Modal>

@@ -48,7 +48,12 @@ export function EkSutunModal({
 
   const ekle = () => {
     if (!temizBaslik || cakisiyor) return
-    const yeni: KesifEkSutun = { key: yeniEkSutunAnahtari(liste), baslik: temizBaslik, tur, sonra: tur === 'metin' ? '' : sonra }
+    const yeni: KesifEkSutun = {
+      key: yeniEkSutunAnahtari(liste),
+      baslik: temizBaslik,
+      tur,
+      sonra: tur === 'metin' || tur === 'sayi' ? '' : sonra,
+    }
     const guncel = [...liste, yeni]
     setListe(guncel)
     setBaslik('')
@@ -122,6 +127,10 @@ export function EkSutunModal({
                 Katsayı
               </label>
               <label className="flex cursor-pointer items-center gap-1.5">
+                <input type="radio" name="ek-tur" checked={tur === 'sayi'} onChange={() => setTur('sayi')} />
+                Sayı
+              </label>
+              <label className="flex cursor-pointer items-center gap-1.5">
                 <input type="radio" name="ek-tur" checked={tur === 'metin'} onChange={() => setTur('metin')} />
                 Metin
               </label>
@@ -132,7 +141,7 @@ export function EkSutunModal({
         <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
           <label className="block">
             <span className="mb-1 block text-[12px] font-medium text-muted-foreground">Şu sütunun sağına</span>
-            <select className={inputCls} value={sonra} disabled={tur === 'metin'} onChange={(e) => setSonra(e.target.value)}>
+            <select className={inputCls} value={sonra} disabled={tur === 'metin' || tur === 'sayi'} onChange={(e) => setSonra(e.target.value)}>
               {bolge.map((k) => (
                 <option key={k} value={k}>
                   {ad(k)}
@@ -154,7 +163,9 @@ export function EkSutunModal({
           <strong className="text-ink">Maliyet</strong> sütunu Birim Fiyat toplamına eklenir.{' '}
           <strong className="text-ink">Katsayı</strong> sütunu hemen solundaki sütunu çarpar; Birim Fiyat’ın hemen
           solundaysa tüm maliyet toplamını çarpar (boş bırakılırsa 1). <strong className="text-ink">Metin</strong>{' '}
-          sütunu fiyatı etkilemez (ör. İşveren Kodu) ve Marka / Model’den sonra gelir.
+          sütunu fiyatı etkilemez (ör. İşveren Kodu) ve Marka / Model’den sonra gelir. <strong className="text-ink">Sayı</strong>{' '}
+          sütunu da fiyatı etkilemez (ör. bina bazlı alt miktar); Miktar’ın yanında yer alır ve Miktar formülünde
+          kullanılabilir.
         </p>
 
         <div>
@@ -169,7 +180,9 @@ export function EkSutunModal({
                     <span className="text-muted-foreground">
                       {e.tur === 'metin'
                         ? 'Metin · Marka / Model sağında'
-                        : `${e.tur === 'katsayi' ? 'Katsayı' : 'Maliyet'} · ${ad(e.sonra)} sağında`}
+                        : e.tur === 'sayi'
+                          ? 'Sayı · Miktar sağında'
+                          : `${e.tur === 'katsayi' ? 'Katsayı' : 'Maliyet'} · ${ad(e.sonra)} sağında`}
                     </span>
                     <Button variant="ghost" size="sm" className="ml-auto" onClick={() => kaldir(e.key)}>
                       Kaldır

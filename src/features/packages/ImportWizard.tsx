@@ -13,10 +13,14 @@ import {
   type SurveyWorkbookPreview,
 } from '../../lib/kesif'
 import { BOS_KESIF, useKesifDogrulama } from '../../lib/kesifDogrulama'
+import { onerilenMiktarFormulu } from '../../lib/kesifSutunlar'
 import {
+  EK_ROLLERI,
   baslikPozAyrimi,
   belgeyiSatirlaraCevir,
   eslemeOnerisi,
+  eslenmeyenleriEkSutunYap,
+  sonuclariBirlestir,
   eslemeSorgusu,
   hucreBos,
   hucreMetin,
@@ -34,7 +38,12 @@ const ONIZLEME_SATIR_LIMITI = 80
 type Props = {
   mevcutSatirSayisi: number
   onClose: () => void
-  onTamam: (satirlar: KesifSatiri[], mod: AktarimModu, ekSutunlar: KesifEkSutun[]) => void
+  onTamam: (
+    satirlar: KesifSatiri[],
+    mod: AktarimModu,
+    ekSutunlar: KesifEkSutun[],
+    formuller?: Record<string, string>,
+  ) => void
 }
 
 const selectCls =
@@ -52,6 +61,8 @@ function baslangicAyari(onizleme: SurveyWorkbookPreview, sayfa: SayfaVerisi): Ic
     esleme: eslemeOnerisi(ham?.suggestedColumnMap ?? {}, sayfa.sutunSayisi),
     birimNormalize: true,
     kokBasligi: '',
+    ustBaslik: false,
+    miktarToplami: false,
   }
 }
 
@@ -65,6 +76,9 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
   const [okunuyor, setOkunuyor] = useState(false)
   const [dosyaHatasi, setDosyaHatasi] = useState('')
   const [belge, setBelge] = useState<SurveyDocumentDto | null>(null)
+  // Birden çok sayfa seçildiyse (birleştirme): ana sayfa dışındaki sayfalar ve ayrıştırılmış belgeleri
+  const [ekSayfalar, setEkSayfalar] = useState<string[]>([])
+  const [ekBelgeler, setEkBelgeler] = useState<Array<{ ad: string; belge: SurveyDocumentDto }>>([])
   const [belgeYukleniyor, setBelgeYukleniyor] = useState(false)
   const [belgeHatasi, setBelgeHatasi] = useState('')
   const [sadeceSorunlu, setSadeceSorunlu] = useState(false)
@@ -74,10 +88,11 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
   const sayfa = sayfalar.find((s) => s.ad === sayfaAdi) ?? null
   const roller = useMemo(() => onizleme?.roles ?? [], [onizleme])
 
-  const sonuc = useMemo(
-    () => (belge && ayar ? belgeyiSatirlaraCevir(belge, ayar) : null),
-    [belge, ayar],
-  )
+  const sonuc = useMemo(() => {
+    if (!belge || !ayar) return null
+    const parcalar = [belgeyiSatirlaraCevir(belge, ayar), ...ekBelgeler.map((e) => belgeyiSatirlaraCevir(e.belge, ayar))]
+    return sonuclariBirlestir(parcalar)
+  }, [belge, ayar, ekBelgeler])
 
   const guncelle = (kismi: Partial<IceAktarAyar>) =>
     setAyar((a) => (a ? { ...a, ...kismi } : a))
@@ -102,6 +117,8 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
       setSayfaAdi(ad)
       setAyar(baslangicAyari(o, s))
       setBelge(null)
+      setEkSayfalar([])
+      setEkBelgeler([])
     } catch (e) {
       setDosyaHatasi(e instanceof Error ? e.message : 'Dosya okunamadı.')
     } finally {
@@ -114,6 +131,14 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
     if (!s || !onizleme) return
     setSayfaAdi(ad)
     setAyar(baslangicAyari(onizleme, s))
+    setBelge(null)
+    setEkBelgeler([])
+    setEkSayfalar((liste) => liste.filter((x) => x !== ad))
+  }
+
+  const ekSayfaDegistir = (ad: string, secili: boolean) => {
+    setEkSayfalar((liste) => (secili ? [...liste.filter((x) => x !== ad), ad] : liste.filter((x) => x !== ad)))
+    setEkBelgeler([])
     setBelge(null)
   }
 
@@ -134,8 +159,11 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
     // Level / Poz No sütunu isteğe bağlıdır; ne gelirse Level'a çevrilir (sütun türü içerikten çözülür)
     return {
       eksik: roller.filter((r) => r.required && !sayac.has(r.key)).map((r) => r.label),
-      tekrar: [...sayac.entries()].filter(([, n]) => n > 1).map(([k]) => k),
-      tekrarEtiketleri: [...sayac.entries()].filter(([, n]) => n > 1).map(([k]) => etiket(k)),
+      // Ek sütun rolleri (maliyet / katsayı / metin / sayı) birden çok sütuna verilebilir
+      tekrar: [...sayac.entries()].filter(([k, n]) => n > 1 && !(EK_ROLLERI as readonly string[]).includes(k)).map(([k]) => k),
+      tekrarEtiketleri: [...sayac.entries()]
+        .filter(([k, n]) => n > 1 && !(EK_ROLLERI as readonly string[]).includes(k))
+        .map(([k]) => etiket(k)),
     }
   }, [ayar, roller])
 
@@ -158,15 +186,40 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
     setBelgeYukleniyor(true)
     setBelgeHatasi('')
     setBelge(null)
+    setEkBelgeler([])
     try {
+      // Birden çok sayfa birleştirilirken her sayfa kendi adıyla bir üst başlık olur
+      const birlestir = ekSayfalar.length > 0
       const b = await kesifEslemeIleIceAktar(dosya, {
         sheetName: sayfa.ad,
         headerRow: ayarKaynagi.baslikSatiri,
         firstDataRow: ayarKaynagi.ilkSatir,
         lastDataRow: ayarKaynagi.sonSatir,
         columnMap: eslemeSorgusu(ayarKaynagi.esleme),
-        rootTitle: ayarKaynagi.kokBasligi,
+        rootTitle: birlestir ? sayfa.ad.trim() : ayarKaynagi.kokBasligi,
+        groupUnderRoot: birlestir || ayarKaynagi.ustBaslik,
       })
+      // Ek sayfalar: başlık satırı ve sütun eşlemesi her sayfa için Ark.Excel'in otomatik tespitiyle yapılır
+      const digerleri: Array<{ ad: string; belge: SurveyDocumentDto }> = []
+      for (const ad of ekSayfalar) {
+        const ham = onizleme?.sheets.find((x) => x.name === ad)
+        if (!ham) continue
+        const sv = sayfaVerisi(ham)
+        const a = baslangicAyari(onizleme!, sv)
+        digerleri.push({
+          ad,
+          belge: await kesifEslemeIleIceAktar(dosya, {
+            sheetName: ad,
+            headerRow: a.baslikSatiri,
+            firstDataRow: a.ilkSatir,
+            lastDataRow: a.sonSatir,
+            columnMap: eslemeSorgusu(a.esleme),
+            rootTitle: ad.trim(),
+            groupUnderRoot: true,
+          }),
+        })
+      }
+      setEkBelgeler(digerleri)
       setBelge(b)
     } catch (e) {
       setBelgeHatasi(
@@ -192,7 +245,11 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
 
   const uygula = () => {
     if (!sonuc || sonuc.satirlar.length === 0) return
-    onTamam(sonuc.satirlar, mevcutSatirSayisi === 0 ? 'degistir' : mod, sonuc.ekSutunlar)
+    // Alt miktar sütunları varsa ve istendiyse Miktar = alt miktarların toplamı (sütun formülü)
+    const sayilar = sonuc.ekSutunlar.filter((e) => e.tur === 'sayi')
+    const formuller =
+      ayar?.miktarToplami && sayilar.length > 0 ? { miktar: onerilenMiktarFormulu(sonuc.ekSutunlar) } : undefined
+    onTamam(sonuc.satirlar, mevcutSatirSayisi === 0 ? 'degistir' : mod, sonuc.ekSutunlar, formuller)
   }
 
   /* ------------------------------- Render ---------------------------- */
@@ -252,6 +309,8 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
             dosyaRef={dosyaRef}
             onDosya={(f) => void dosyaSec(f)}
             onSayfa={sayfaDegistir}
+            ekSayfalar={ekSayfalar}
+            onEkSayfa={ekSayfaDegistir}
           />
         )}
 
@@ -282,6 +341,7 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
               guncelle({ esleme: eslemeOnerisi(ham?.suggestedColumnMap ?? {}, sayfa.sutunSayisi) })
             }}
             onTemizle={() => guncelle({ esleme: ayar.esleme.map(() => '') })}
+            onEkSutunYap={() => guncelle({ esleme: eslenmeyenleriEkSutunYap(sayfa, ayar) })}
           />
         )}
 
@@ -290,6 +350,7 @@ export function ImportWizard({ mevcutSatirSayisi, onClose, onTamam }: Props) {
             ayar={ayar}
             sonuc={sonuc}
             belge={belge}
+            birlestirilen={ekSayfalar.length > 0 ? [sayfa?.ad ?? '', ...ekSayfalar].map((x) => x.trim()) : []}
             yukleniyor={belgeYukleniyor}
             hata={belgeHatasi}
             mevcutSatirSayisi={mevcutSatirSayisi}
@@ -354,6 +415,8 @@ function DosyaAdimi({
   dosyaRef,
   onDosya,
   onSayfa,
+  ekSayfalar,
+  onEkSayfa,
 }: {
   dosyaAdi?: string
   sayfalar: Array<{ name: string; rowCount: number; columnCount: number; detectedColumnCount: number }>
@@ -364,6 +427,8 @@ function DosyaAdimi({
   dosyaRef: React.RefObject<HTMLInputElement | null>
   onDosya: (f: File | undefined) => void
   onSayfa: (ad: string) => void
+  ekSayfalar: string[]
+  onEkSayfa: (ad: string, secili: boolean) => void
 }) {
   return (
     <div className="space-y-5">
@@ -434,10 +499,33 @@ function DosyaAdimi({
                   <span className="mt-0.5 block text-[12px] text-muted-foreground">
                     {s.rowCount} satır · {s.columnCount} sütun
                   </span>
+                  {!secili && s.detectedColumnCount >= 4 && (
+                    <label
+                      className="mt-1.5 flex cursor-pointer items-center gap-1.5 text-[12px] text-ink"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 accent-black"
+                        checked={ekSayfalar.includes(s.name)}
+                        onChange={(e) => onEkSayfa(s.name, e.target.checked)}
+                      />
+                      Birleştir
+                    </label>
+                  )}
                 </button>
               )
             })}
           </div>
+          <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
+            Birden çok bina / blok sayfasını tek keşifte toplamak için diğer keşif sayfalarında{' '}
+            <strong className="text-ink">Birleştir</strong>i işaretleyin: her sayfa kendi adıyla bir üst başlık olur. Seçtiğiniz
+            sayfanın aralığı ve sütun eşlemesi sonraki adımlarda ayarlanır; birleştirilen diğer sayfalarda Ark.Excel’in otomatik
+            tespiti kullanılır.
+            {ekSayfalar.length > 0 && (
+              <strong className="ml-1 text-ink">Birleştirilecek: {ekSayfalar.map((x) => x.trim()).join(', ')}</strong>
+            )}
+          </p>
         </div>
       )}
 
@@ -574,6 +662,7 @@ function EslemeAdimi({
   onEsleme,
   onOtomatik,
   onTemizle,
+  onEkSutunYap,
 }: {
   sayfa: SayfaVerisi
   ayar: IceAktarAyar
@@ -582,6 +671,8 @@ function EslemeAdimi({
   onEsleme: (c: number, rol: string) => void
   onOtomatik: () => void
   onTemizle: () => void
+  /** Eşlenmemiş ama başlığı ve verisi olan sütunları ek sütun (sayı / metin) yapar */
+  onEkSutunYap: () => void
 }) {
   // Örnek değerler: veri aralığındaki ilk 3 dolu hücre
   const ornekler = useMemo(() => {
@@ -610,6 +701,14 @@ function EslemeAdimi({
         <div className="ml-auto flex gap-2">
           <Button variant="secondary" size="sm" onClick={onOtomatik} title="Ark.Excel'in tespit ettiği eşlemeyi geri yükler">
             Otomatik Eşle
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onEkSutunYap}
+            title="Eşlenmemiş sütunlar ek sütun olur: sayı gibi görünenler Ek sayı, diğerleri Ek metin"
+          >
+            Eşlenmeyenleri ek sütun yap
           </Button>
           <Button variant="ghost" size="sm" onClick={onTemizle}>
             Temizle
@@ -741,6 +840,7 @@ function OnizlemeAdimi({
   ayar,
   sonuc,
   belge,
+  birlestirilen,
   yukleniyor,
   hata,
   mevcutSatirSayisi,
@@ -755,6 +855,8 @@ function OnizlemeAdimi({
   ayar: IceAktarAyar
   sonuc: ReturnType<typeof belgeyiSatirlaraCevir> | null
   belge: SurveyDocumentDto | null
+  /** Birleştirilen sayfaların adları (boşsa tek sayfa) */
+  birlestirilen: string[]
   yukleniyor: boolean
   hata: string
   mevcutSatirSayisi: number
@@ -839,7 +941,45 @@ function OnizlemeAdimi({
           </label>
 
           <div className="space-y-2 border-t border-line pt-3">
-            {belge?.sections.some((b) => b.isGenerated) && (
+            {birlestirilen.length > 0 ? (
+              <p className="rounded-lg border border-line bg-white px-3 py-2 text-[12px] leading-5 text-ink">
+                <strong>{birlestirilen.length} sayfa birleştiriliyor:</strong> {birlestirilen.join(' · ')}. Her sayfa kendi
+                adıyla bir üst başlık (Level 1) olur; içeriği bir seviye aşağı iner.
+              </p>
+            ) : (
+              <label className="flex cursor-pointer items-start gap-2.5 text-[13px] text-black">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-black"
+                  checked={ayar.ustBaslik}
+                  onChange={(e) => onYenidenGetir({ ustBaslik: e.target.checked })}
+                />
+                <span>
+                  Sayfayı tek bir üst başlık altında topla
+                  <span className="block text-[12px] text-muted-foreground">
+                    Sayfa adı Level 1 başlık olur, tüm içerik bir seviye aşağı iner (bina / blok bazlı keşiflerde yararlı).
+                  </span>
+                </span>
+              </label>
+            )}
+            {sonuc && sonuc.ekSutunlar.some((e) => e.tur === 'sayi') && (
+              <label className="flex cursor-pointer items-start gap-2.5 text-[13px] text-black">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-black"
+                  checked={ayar.miktarToplami}
+                  onChange={(e) => onAyar({ miktarToplami: e.target.checked })}
+                />
+                <span>
+                  Miktar’ı alt miktarların toplamı olarak hesapla
+                  <span className="block text-[12px] text-muted-foreground">
+                    Ek sayı sütunları ({sonuc.ekSutunlar.filter((e) => e.tur === 'sayi').map((e) => e.baslik).join(', ')}) toplanır;
+                    Miktar sütunu formüllü olur. Kapalıysa dosyadaki Miktar değerleri aynen alınır.
+                  </span>
+                </span>
+              </label>
+            )}
+            {belge?.sections.some((b) => b.isGenerated) && birlestirilen.length === 0 && (
               <label className="block">
                 <span className="mb-1 block text-[12px] font-medium text-muted-foreground">
                   Üst satır (01) açıklaması

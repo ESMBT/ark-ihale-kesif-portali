@@ -97,7 +97,7 @@ export type SurveyDocumentDto = {
   disciplineTitle?: string | null
   headerRow?: number | null
   /** Dosyadaki özel sütunlar (Nakliye, Fittings, İşveren Kodu …) */
-  extraColumns?: Array<{ key: string; title: string; kind: 'cost' | 'factor' | 'text'; after: string }>
+  extraColumns?: Array<{ key: string; title: string; kind: 'cost' | 'factor' | 'text' | 'number'; after: string }>
   sections: SurveySectionDto[]
   totals?: SurveyTotalsDto | null
   computedTotals: SurveyTotalsDto
@@ -449,6 +449,8 @@ export type SurveyImportOptions = {
   autoNumber?: boolean
   /** Otomatik numaralandırmada üretilen kök satırın (01) açıklaması; boşsa keşif başlığı */
   rootTitle?: string
+  /** Belgeyi tek bir üst başlık (kök) altında topla: çok sayfalı keşiflerde her sayfa ayrı bölüm olur */
+  groupUnderRoot?: boolean
 }
 
 /** Ark.Excel servisinden dönen, kullanıcıya gösterilebilir hata */
@@ -521,6 +523,7 @@ export function kesifEslemeIleIceAktar(
   // Ne gelirse Level'a çevrilir ve otomatik numaralanır; yalnızca açıkça false verilirse kapatılır
   q.set('autoNumber', opts.autoNumber === false ? 'false' : 'true')
   if (opts.rootTitle?.trim()) q.set('rootTitle', opts.rootTitle.trim())
+  if (opts.groupUnderRoot) q.set('groupUnderRoot', 'true')
   return excelIstegi<SurveyDocumentDto>(`/import?${q.toString()}`, file)
 }
 

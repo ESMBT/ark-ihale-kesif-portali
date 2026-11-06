@@ -39,6 +39,8 @@ import {
   birimFiyatFormulu,
   ekDeger,
   ekSutunlariBirlestir,
+  fiyatEtkileyenEkVar,
+  kalemMiktari,
   formulCevir,
   kalemBirimFiyati,
   FORMULLU_SUTUNLAR,
@@ -243,7 +245,7 @@ function kesifSheetsOlustur(
       s.malzeme == null &&
       s.iscilik == null &&
       s.ggk == null &&
-      Object.keys(s.ekDegerler ?? {}).length === 0 &&
+      !fiyatEtkileyenEkVar(s, ek) &&
       !ozel.birimFiyat
 
     const cells: Record<string, SpreadsheetCellValue> = {
@@ -253,7 +255,8 @@ function kesifSheetsOlustur(
       pozTanimi: s.pozTanimi,
       markaModel: s.markaModel ?? '',
       birim: s.birim,
-      miktar: s.miktar,
+      // Miktar sütun formülü girildiyse (ör. alt miktarların toplamı) her satırda hesaplanır
+      miktar: ozel.miktar ? `=${formulCevir(ozel.miktar, sutunlar, harf, excelRow).formul}` : s.miktar,
       malzeme: s.malzeme ?? '',
       iscilik: s.iscilik ?? '',
       ggk: s.ggk ?? '',
@@ -363,18 +366,30 @@ export function TakeoffTable({
   const numarali = useMemo(() => levelNumaralariniUygula(satirlar), [satirlar])
   // Kayıt / dışa aktarım: özel sütun varsa Birim Fiyat (maliyet × katsayı) hesaplanıp satıra yazılır
   const kaydedilecek = useMemo(() => {
-    const formullu = Boolean(formuller.birimFiyat)
-    if (ekSutunlar.length === 0 && !formullu) return numarali
-    return numarali.map((s) =>
-      s.yorum ||
-      baslikMi(s) ||
-      (!formullu && s.malzeme == null && s.iscilik == null && s.ggk == null && !s.ekDegerler)
-        ? s
-        : { ...s, birimFiyat: kalemBirimFiyati(s, ekSutunlar, formuller) },
-    )
+    const fiyatFormullu = Boolean(formuller.birimFiyat)
+    const miktarFormullu = Boolean(formuller.miktar)
+    if (ekSutunlar.length === 0 && !fiyatFormullu && !miktarFormullu) return numarali
+    return numarali.map((s) => {
+      if (s.yorum || baslikMi(s)) return s
+      let yeni = s
+      // Formülle hesaplanan Miktar / Birim Fiyat kayıt ve dışa aktarımda değer olarak yazılır
+      if (miktarFormullu) yeni = { ...yeni, miktar: kalemMiktari(s, ekSutunlar, formuller) }
+      if (fiyatFormullu || s.malzeme != null || s.iscilik != null || s.ggk != null || fiyatEtkileyenEkVar(s, ekSutunlar)) {
+        yeni = { ...yeni, birimFiyat: kalemBirimFiyati(s, ekSutunlar, formuller) }
+      }
+      return yeni
+    })
   }, [numarali, ekSutunlar, formuller])
+  // Doğrulama formülle hesaplanan Miktar'ı görür (aksi halde formül varken eski değerler denetlenirdi)
+  const dogrulanacak = useMemo(
+    () =>
+      formuller.miktar
+        ? satirlar.map((s) => (s.yorum || baslikMi(s) ? s : { ...s, miktar: kalemMiktari(s, ekSutunlar, formuller) }))
+        : satirlar,
+    [satirlar, ekSutunlar, formuller],
+  )
   // Kurallar backend'de (Ark.Excel); satırlar değiştikçe debounce ile doğrulanır
-  const dogrulama = useKesifDogrulama(satirlar)
+  const dogrulama = useKesifDogrulama(dogrulanacak)
   // Birim sütunu, backend'deki tanımlı birimlerden açılır liste sunar (referans yüklenince sayfalar yeniden kurulur)
   const birimSecenekleri = dogrulama.referans?.units
   const olustur = (
@@ -869,7 +884,12 @@ export function TakeoffTable({
     setSheets(olustur(levelleriDoldur(paket.keşif), goster))
   }
 
-  const iceAktarUygula = (yeniSatirlar: KesifSatiri[], mod: AktarimModu, gelenEk: KesifEkSutun[] = []) => {
+  const iceAktarUygula = (
+    yeniSatirlar: KesifSatiri[],
+    mod: AktarimModu,
+    gelenEk: KesifEkSutun[] = [],
+    gelenFormuller?: KesifSutunFormulleri,
+  ) => {
     // Dosyadaki özel sütunlar (Nakliye, Fittings…) mevcutlarla ad + türe göre birleştirilir; satır değerleri yeni anahtarlara taşınır
     const { birlesik, harita } = ekSutunlariBirlestir(ekSutunlar, gelenEk)
     const tasinan = yeniSatirlar.map((s) =>
@@ -883,10 +903,12 @@ export function TakeoffTable({
         : s,
     )
     const yeniListe = mod === 'degistir' ? tasinan : [...satirlar, ...tasinan]
+    const yeniFormuller = gelenFormuller ? { ...formuller, ...gelenFormuller } : formuller
     setEkSutunlar(birlesik)
+    setFormuller(yeniFormuller)
     setSatirlar(yeniListe)
-    setSheets(olustur(yeniListe, goster, birlesik))
-    onKaydet(levelNumaralariniUygula(yeniListe), birlesik, formuller)
+    setSheets(olustur(yeniListe, goster, birlesik, yeniFormuller))
+    onKaydet(levelNumaralariniUygula(yeniListe), birlesik, yeniFormuller)
     setKaydedildiBilgisi(true)
     setSihirbazAcik(false)
     setDuzenle(true)

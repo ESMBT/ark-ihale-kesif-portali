@@ -1,4 +1,5 @@
 import type { KesifEkSutun, KesifSatiri } from '../data/types'
+import { ekSutunlariBirlestir } from './kesifSutunlar'
 import {
   surveyDocumentToKaynakliSatirlar,
   type SurveyDocumentDto,
@@ -33,6 +34,10 @@ export type IceAktarAyar = {
   birimNormalize: boolean
   /** Otomatik numaralandırmada üretilen kök satırın (01) açıklaması; boşsa keşif başlığı */
   kokBasligi: string
+  /** Sayfayı tek bir üst başlık altında topla (kök = Üst satır açıklaması ya da sayfa adı) */
+  ustBaslik: boolean
+  /** Miktar'ı ek sayı sütunlarının (alt miktarların) toplamı olarak hesapla (sütun formülü) */
+  miktarToplami: boolean
 }
 
 export type SayfaVerisi = {
@@ -236,8 +241,8 @@ export function belgeyiSatirlaraCevir(belge: SurveyDocumentDto, ayar: IceAktarAy
   const ekSutunlar: KesifEkSutun[] = (belge.extraColumns ?? []).map((c) => ({
     key: c.key,
     baslik: c.title,
-    tur: c.kind === 'cost' ? 'maliyet' : c.kind === 'factor' ? 'katsayi' : 'metin',
-    sonra: c.kind === 'text' ? '' : c.after,
+    tur: c.kind === 'cost' ? 'maliyet' : c.kind === 'factor' ? 'katsayi' : c.kind === 'number' ? 'sayi' : 'metin',
+    sonra: c.kind === 'text' || c.kind === 'number' ? '' : c.after,
   }))
   return {
     satirlar,
@@ -251,4 +256,69 @@ export function belgeyiSatirlaraCevir(belge: SurveyDocumentDto, ayar: IceAktarAy
       uyari: (belge.warnings ?? []).length,
     },
   }
+}
+
+/** Birden çok kez eşlenebilen (ek sütun) roller */
+export const EK_ROLLERI = ['extraCost', 'extraFactor', 'extraText', 'extraNumber'] as const
+
+const sayiGibi = (h: string | undefined): boolean => {
+  const t = (h ?? '').replace(/[\u00A0\u202F\s]/g, '').replace(/[%₺$€]|TL|USD|EUR/gi, '')
+  return t !== '' && /^[-+]?[0-9][0-9.,]*$/.test(t)
+}
+
+/**
+ * Eşlenmemiş ama başlığı ve verisi olan sütunları ek sütun yapar (sayı gibi görünenler "Ek sayı", diğerleri "Ek metin").
+ * Dinamik eşleme: standart olmayan sütunlar tek tıkla tabloya taşınır; ardından rolü tek tek değiştirilebilir.
+ */
+export function eslenmeyenleriEkSutunYap(sayfa: SayfaVerisi, ayar: IceAktarAyar): Esleme {
+  const yeni = [...ayar.esleme]
+  const son = Math.min(ayar.sonSatir ?? sayfa.satirlar.length, sayfa.satirlar.length)
+  for (let c = 0; c < sayfa.sutunSayisi; c++) {
+    if (yeni[c]) continue
+    const baslik = ayar.baslikSatiri ? hucreMetin(sayfa.satirlar[ayar.baslikSatiri - 1]?.[c]) : ''
+    if (!baslik) continue
+    const degerler: string[] = []
+    for (let r = ayar.ilkSatir; r <= son && degerler.length < 40; r++) {
+      const h = sayfa.satirlar[r - 1]?.[c]
+      if (!hucreBos(h)) degerler.push(hucreMetin(h))
+    }
+    if (degerler.length === 0) continue
+    yeni[c] = degerler.every(sayiGibi) ? 'extraNumber' : 'extraText'
+  }
+  return yeni
+}
+
+/**
+ * Birden çok sayfanın sonuçlarını tek listede birleştirir: satır kimlikleri sayfa sırasıyla önek alır, özel sütunlar ad + türe göre
+ * birleştirilir ve satırların `ekDegerler` anahtarları yeni anahtarlara taşınır.
+ */
+export function sonuclariBirlestir(parcalar: IceAktarSonucu[]): IceAktarSonucu {
+  if (parcalar.length === 1) return parcalar[0]
+  let ek: KesifEkSutun[] = []
+  const satirlar: KesifSatiri[] = []
+  const onizleme: OnizlemeSatiri[] = []
+  const genelUyarilar: string[] = []
+  const ozet = { grup: 0, kalem: 0, yorum: 0, uyari: 0 }
+  parcalar.forEach((p, i) => {
+    const { birlesik, harita } = ekSutunlariBirlestir(ek, p.ekSutunlar)
+    ek = birlesik
+    const tasi = (s: KesifSatiri): KesifSatiri => ({
+      ...s,
+      id: `s${i + 1}-${s.id}`,
+      ekDegerler: s.ekDegerler
+        ? Object.fromEntries(Object.entries(s.ekDegerler).flatMap(([k, v]) => (harita[k] ? [[harita[k], v] as const] : [])))
+        : undefined,
+    })
+    for (const o of p.onizleme) {
+      const satir = tasi(o.satir)
+      onizleme.push({ ...o, satir })
+      satirlar.push(satir)
+    }
+    genelUyarilar.push(...p.genelUyarilar)
+    ozet.grup += p.ozet.grup
+    ozet.kalem += p.ozet.kalem
+    ozet.yorum += p.ozet.yorum
+    ozet.uyari += p.ozet.uyari
+  })
+  return { satirlar, onizleme, genelUyarilar, ozet, ekSutunlar: ek }
 }

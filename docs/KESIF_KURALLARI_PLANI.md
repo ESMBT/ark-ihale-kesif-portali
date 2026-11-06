@@ -391,6 +391,18 @@ MİKTAR sütunları | KEŞİF TOPLAM MİKTAR | MALZEME / İŞÇİLİK / GGK biri
   Yemekhane 41.375.320,78 · Yönetim 28.715.228,98 · Güvenlik 2.140.401,04; genel 195.224.000,00).
 - Ayrıca: sayfa adındaki sondaki boşluk ("Refit Hangar ") artık sayfa seçimini bozmaz; "0.00" gibi sıfır kodlar boş sayılır.
 
+### Keşif proje düzeyine taşındı (06.11)
+
+Keşif tablosu (Spreadsheet, içe aktarma sihirbazı, sütun formülleri, özel sütunlar …) önceden **ihale paketinin** Keşif sekmesindeydi; doğru yer
+**Proje sayfasındaki Keşif sekmesidir** (`/modul/ihale/projeler/:id`, şantiyeci modülünde de aynı).
+
+- **Veri:** `Proje.keşif`, `Proje.kesifSutunlari`, `Proje.kesifSutunFormulleri` (store: `projeKesifGuncelle`). `IhalePaketi`'nden `keşif` ve
+  keşif sütun alanları kaldırıldı.
+- **Bileşen:** `TakeoffTable` artık paketten bağımsız (`kaynak: KesifKaynagi`); Proje → Keşif sekmesinde çalışır.
+- **Paket sayfaları:** Keşif sekmesi kaldırıldı. Paket şimdilik **projenin keşfini** okur (yayın kapısı, doğrulama, poz sayısı); "Keşfe git /
+  Keşif boş · Hazırla" projenin Keşif sekmesine yönlendirir (`?sekme=kesif` ile doğrudan açılır).
+- **Açık:** paket–poz ilişkisi (hangi pozlar hangi ihale paketinde) henüz yok; şimdilik her paket tüm proje keşfini görür.
+
 ### Karar gerekenler
 
 - **D1** Poz Kodu tabloda elle eklenen satırlarda da düzenlenebilir mi? (Öneri: evet; içe aktarmadan gelen salt-okunur değil.)

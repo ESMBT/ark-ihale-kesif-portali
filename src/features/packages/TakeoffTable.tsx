@@ -16,7 +16,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { LabeledFilter } from '../../components/ui/FilterBar'
 import { Icon } from '../../components/ui/Icon'
-import type { IhalePaketi, KesifEkSutun, KesifSatiri } from '../../data/types'
+import type { KesifEkSutun, KesifSatiri } from '../../data/types'
 import { kesifDisaAktar, kesifSablonuIndir } from '../../lib/kesif'
 import {
   duzeltmeyiUygula,
@@ -336,26 +336,38 @@ function sayiCozumle(deger: string | number | null | undefined): number | undefi
  * İhale Paketi Detayı -> Keşif Sekmesi
  * `@ark/ui-kit` Spreadsheet bileşeni ve `Ark.Excel` backend entegrasyonu ile çalışır.
  */
+/**
+ * Keşif tablosunun verisi. Keşif proje düzeyindedir (Proje sayfası → Keşif sekmesi): satırlar, özel sütunlar ve sütun
+ * formülleri projeye bağlıdır.
+ */
+export type KesifKaynagi = {
+  id: string
+  ad: string
+  keşif: KesifSatiri[]
+  kesifSutunlari?: KesifEkSutun[]
+  kesifSutunFormulleri?: KesifSutunFormulleri
+}
+
 export function TakeoffTable({
-  paket,
+  kaynak,
   onKaydet,
 }: {
-  paket: IhalePaketi
+  kaynak: KesifKaynagi
   onKaydet: (satirlar: KesifSatiri[], ekSutunlar?: KesifEkSutun[], formuller?: KesifSutunFormulleri) => void
 }) {
-  const [satirlar, setSatirlar] = useState<KesifSatiri[]>(() => levelleriDoldur(paket.keşif))
+  const [satirlar, setSatirlar] = useState<KesifSatiri[]>(() => levelleriDoldur(kaynak.keşif))
   const [duzenle, setDuzenle] = useState(true)
   const [tamEkran, setTamEkran] = useState(false)
   const [goster, setGoster] = useState('Tümü')
   const [versiyon, setVersiyon] = useState('#1 27.10.2026')
-  const [ekSutunlar, setEkSutunlar] = useState<KesifEkSutun[]>(() => paket.kesifSutunlari ?? [])
+  const [ekSutunlar, setEkSutunlar] = useState<KesifEkSutun[]>(() => kaynak.kesifSutunlari ?? [])
   const [ekSutunModalAcik, setEkSutunModalAcik] = useState(false)
   // Sütun formülleri (Birim Fiyat / Toplam Tutar) tek yerden girilir ve tüm poz satırlarına uygulanır
-  const [formuller, setFormuller] = useState<KesifSutunFormulleri>(() => paket.kesifSutunFormulleri ?? {})
+  const [formuller, setFormuller] = useState<KesifSutunFormulleri>(() => kaynak.kesifSutunFormulleri ?? {})
   const [formulModali, setFormulModali] = useState<FormulluSutun | null>(null)
   const [ekSutunBaslangic, setEkSutunBaslangic] = useState<string | undefined>(undefined)
   const [sheets, setSheets] = useState<SpreadsheetSheet[]>(() =>
-    kesifSheetsOlustur(levelleriDoldur(paket.keşif), 'Tümü', paket.kesifSutunlari ?? [], [], paket.kesifSutunFormulleri ?? {}),
+    kesifSheetsOlustur(levelleriDoldur(kaynak.keşif), 'Tümü', kaynak.kesifSutunlari ?? [], [], kaynak.kesifSutunFormulleri ?? {}),
   )
   const [kaydedildiBilgisi, setKaydedildiBilgisi] = useState(false)
   const [sihirbazAcik, setSihirbazAcik] = useState(false)
@@ -411,19 +423,19 @@ export function TakeoffTable({
 
   // Paket değiştiğinde tabloyu senkronize et
   useEffect(() => {
-    setSatirlar(levelleriDoldur(paket.keşif))
-    setEkSutunlar(paket.kesifSutunlari ?? [])
-    setFormuller(paket.kesifSutunFormulleri ?? {})
+    setSatirlar(levelleriDoldur(kaynak.keşif))
+    setEkSutunlar(kaynak.kesifSutunlari ?? [])
+    setFormuller(kaynak.kesifSutunFormulleri ?? {})
     setSheets(
       kesifSheetsOlustur(
-        levelleriDoldur(paket.keşif),
+        levelleriDoldur(kaynak.keşif),
         goster,
-        paket.kesifSutunlari ?? [],
+        kaynak.kesifSutunlari ?? [],
         birimSecenekleri ?? [],
-        paket.kesifSutunFormulleri ?? {},
+        kaynak.kesifSutunFormulleri ?? {},
       ),
     )
-  }, [paket.id])
+  }, [kaynak.id])
 
   useEffect(() => {
     if (birimSecenekleri && birimSecenekleri.length > 0) setSheets(olustur(satirlar))
@@ -880,8 +892,8 @@ export function TakeoffTable({
   }
 
   const handleReset = () => {
-    setSatirlar(levelleriDoldur(paket.keşif))
-    setSheets(olustur(levelleriDoldur(paket.keşif), goster))
+    setSatirlar(levelleriDoldur(kaynak.keşif))
+    setSheets(olustur(levelleriDoldur(kaynak.keşif), goster))
   }
 
   const iceAktarUygula = (
@@ -958,7 +970,7 @@ export function TakeoffTable({
               <Button
                 variant="secondary"
                 icon="download"
-                onClick={() => void kesifDisaAktar(kaydedilecek, paket.ad, ekSutunlar, formuller)}
+                onClick={() => void kesifDisaAktar(kaydedilecek, kaynak.ad, ekSutunlar, formuller)}
               >
                 Dışa Aktar
               </Button>
@@ -1100,7 +1112,7 @@ export function TakeoffTable({
             header={
               <>
                 <div className="flex min-w-0 items-center gap-2 text-[12px]">
-                  <span className="font-bold text-black">{paket.ad}</span>
+                  <span className="font-bold text-black">{kaynak.ad}</span>
                   <span className="text-muted-foreground">
                     — {istatistik.gruplar} ana grup, {istatistik.kalemSayisi} poz kalemi
                   </span>

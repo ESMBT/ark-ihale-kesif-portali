@@ -118,7 +118,8 @@ type Store = {
     yama: Partial<Pick<IhalePaketi, 'ad' | 'isTipi' | 'alanlar'>>,
   ) => void
   paketDurum: (projeId: string, paketId: string, durum: PaketDurumu) => void
-  keşifGuncelle: (projeId: string, paketId: string, satirlar: KesifSatiri[], ekSutunlar?: KesifEkSutun[], formuller?: Record<string, string>) => void
+  /** Projenin keşfini (satırlar, özel sütunlar, sütun formülleri) günceller */
+  projeKesifGuncelle: (projeId: string, satirlar: KesifSatiri[], ekSutunlar?: KesifEkSutun[], formuller?: Record<string, string>) => void
   belgeEkle: (projeId: string, paketId: string, belge: IhalePaketi['belgeler'][number]) => void
   altYukleniciEkle: (projeId: string, paketId: string, firma: string) => void
   altYukleniciSec: (projeId: string, paketId: string, firma: AltYuklenici) => void
@@ -337,7 +338,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   ad,
                   durum: 'taslak',
                   isTipi,
-                  keşif: [],
                   belgeler: [],
                   altYukleniciler: [],
                   alanlar: alanlar ?? {},
@@ -766,28 +766,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
-  const keşifGuncelle = useCallback((projeId: string, paketId: string, satirlar: KesifSatiri[], ekSutunlar?: KesifEkSutun[], formuller?: Record<string, string>) => {
-    setProjeler((prev) =>
-      prev.map((p) =>
-        p.id === projeId
-          ? {
-              ...p,
-              guncellemeTarihi: simdi(),
-              paketler: p.paketler.map((k) =>
-                k.id === paketId
-                  ? {
-                      ...k,
-                      keşif: satirlar,
-                      ...(ekSutunlar ? { kesifSutunlari: ekSutunlar } : {}),
-                      ...(formuller ? { kesifSutunFormulleri: formuller } : {}),
-                    }
-                  : k,
-              ),
-            }
-          : p,
-      ),
-    )
-  }, [])
+  const projeKesifGuncelle = useCallback(
+    (projeId: string, satirlar: KesifSatiri[], ekSutunlar?: KesifEkSutun[], formuller?: Record<string, string>) => {
+      setProjeler((prev) =>
+        prev.map((p) =>
+          p.id === projeId
+            ? {
+                ...p,
+                guncellemeTarihi: simdi(),
+                keşif: satirlar,
+                ...(ekSutunlar ? { kesifSutunlari: ekSutunlar } : {}),
+                ...(formuller ? { kesifSutunFormulleri: formuller } : {}),
+              }
+            : p,
+        ),
+      )
+    },
+    [],
+  )
 
   const belgeEkle = useCallback((projeId: string, paketId: string, belge: IhalePaketi['belgeler'][number]) => {
     setProjeler((prev) =>
@@ -1089,7 +1085,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       soruEkle,
       soruCevapla,
       paketDurum,
-      keşifGuncelle,
+      projeKesifGuncelle,
       belgeEkle,
       altYukleniciEkle,
       altYukleniciSec,
@@ -1145,7 +1141,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       soruEkle,
       soruCevapla,
       paketDurum,
-      keşifGuncelle,
+      projeKesifGuncelle,
       belgeEkle,
       altYukleniciEkle,
       altYukleniciSec,

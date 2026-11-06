@@ -1,6 +1,5 @@
-import { kesifSatirSayisi } from '../../lib/kesifSatir'
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { EntityCard } from '../../components/ui/EntityCard'
@@ -16,6 +15,7 @@ import { paketDurumlari, paketDurumListesi } from '../../data/ihaleDurumlari'
 import { useStore } from '../../data/store'
 import type { IhalePaketi } from '../../data/types'
 import { PackageCreateModal } from '../packages/PackageCreateModal'
+import { TakeoffTable } from '../packages/TakeoffTable'
 import { PackagePublishModal } from '../packages/PackagePublishModal'
 import { modulYolu } from '../../lib/modul'
 import { ProjectEditModal, ProjectInfoSummary } from './ProjectEditModal'
@@ -31,10 +31,15 @@ const sekmeler = [
 export function ProjectDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { projeGetir, goruntulenenProjeler, paketEkle, paketGuncelle, paketSil, paketYayinla, paketDurum, kartGuncelle } = useStore()
+  const { projeGetir, goruntulenenProjeler, paketEkle, paketGuncelle, paketSil, paketYayinla, paketDurum, kartGuncelle, projeKesifGuncelle } = useStore()
 
   const proje = id ? projeGetir(id) : undefined
-  const [sekme, setSekme] = useState('paketler')
+  // Başka sayfalardan `?sekme=kesif` ile doğrudan bir sekmede açılabilir
+  const [aramaParametreleri] = useSearchParams()
+  const [sekme, setSekme] = useState(() => {
+    const istenen = aramaParametreleri.get('sekme')
+    return sekmeler.some((s) => s.key === istenen) ? (istenen as string) : 'paketler'
+  })
   const [arama, setArama] = useState('')
   const [olusturOpen, setOlusturOpen] = useState(false)
   const [duzenlenen, setDuzenlenen] = useState<IhalePaketi | null>(null)
@@ -219,7 +224,6 @@ export function ProjectDetailPage() {
                         <Alan etiket="Sorumlu" deger={sorumluAd(k.sorumluId)} />
                         <Alan etiket="Çalışma tipi" deger={k.isTipi} />
                         <Alan etiket="Doldurulan alan" deger={`${alanSayisi} alan`} />
-                        <Alan etiket="Keşif poz sayısı" deger={`${kesifSatirSayisi(k.keşif)} poz`} />
                         <Alan etiket="Belge" deger={`${k.belgeler.length} dosya`} />
                         <Alan
                           etiket="Seçilen firma"
@@ -266,8 +270,22 @@ export function ProjectDetailPage() {
         </Card>
       )}
 
+      {/* ---------------- Keşif (proje düzeyinde) ---------------- */}
+      {sekme === 'kesif' && (
+        <TakeoffTable
+          kaynak={{
+            id: proje.id,
+            ad: proje.ad,
+            keşif: proje.keşif ?? [],
+            kesifSutunlari: proje.kesifSutunlari,
+            kesifSutunFormulleri: proje.kesifSutunFormulleri,
+          }}
+          onKaydet={(satirlar, ekSutunlar, formuller) => projeKesifGuncelle(proje.id, satirlar, ekSutunlar, formuller)}
+        />
+      )}
+
       {/* ---------------- Diğer sekmeler ---------------- */}
-      {sekme !== 'paketler' && sekme !== 'proje-bilgileri' && (
+      {sekme !== 'paketler' && sekme !== 'proje-bilgileri' && sekme !== 'kesif' && (
         <Card>
           <div className="flex flex-col items-center gap-3 py-14 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted text-ink">

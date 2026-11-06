@@ -134,6 +134,15 @@ export type Proje = {
   /** İhale Dosyası alan id → değer */
   ihaleDosyasi: Record<string, string>
   paketler: IhalePaketi[]
+  /**
+   * Projenin keşfi (Excel benzeri keşif tablosu). Keşif proje düzeyindedir: Proje sayfasındaki "Keşif" sekmesinde
+   * hazırlanır; ihale paketleri şimdilik bu keşfi okur.
+   */
+  keşif?: KesifSatiri[]
+  /** Keşif tablosuna eklenen özel sütunlar (Nakliye, Fittings, bina bazlı miktar …) */
+  kesifSutunlari?: KesifEkSutun[]
+  /** Sütun formülleri (tek yerden): sütun anahtarı (miktar | birimFiyat | toplam) → `[Sütun Adı]` başvurulu formül gövdesi */
+  kesifSutunFormulleri?: Record<string, string>
   notlar: string
   aktivite: { tarih: string; metin: string; ikon: string }[]
 }
@@ -208,11 +217,6 @@ export type IhalePaketi = {
   isTipi: 'Birim Fiyatlı' | 'Götürü' | 'Malzeme + İşçilik'
   /** Seçilen alt yüklenici */
   seciliFirma?: string
-  keşif: KesifSatiri[]
-  /** Keşif tablosuna eklenen özel sütunlar (Nakliye, Fittings …) */
-  kesifSutunlari?: KesifEkSutun[]
-  /** Sütun formülleri (tek yerden): sütun anahtarı (birimFiyat | toplam) → `[Sütun Adı]` başvurulu formül gövdesi */
-  kesifSutunFormulleri?: Record<string, string>
   belgeler: ProjeBelge[]
   altYukleniciler: AltYuklenici[]
   /** İhale paketi oluşturulurken doldurulan alanlar (alan id → değer) */

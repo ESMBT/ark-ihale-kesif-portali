@@ -11,7 +11,7 @@ import { StatusPill, type PillTone } from '../../components/ui/Shell'
 import { ihaleBelgeleri, sozlesmeBelgeleri, zorunluDavetEklari } from '../../data/sozlesmeBelgeleri'
 import { sozlesmeTurleri } from '../../data/sozlesmeTurleri'
 import { ornekAltYukleniciler, personeller } from '../../data/mock'
-import type { AltYuklenici, DegerlendirmeDurumu, IhalePaketi } from '../../data/types'
+import type { AltYuklenici, DegerlendirmeDurumu, IhalePaketi, KesifSatiri } from '../../data/types'
 
 /* ------------------------------------------------------------------
    İki ayrı durum ekseni
@@ -80,7 +80,7 @@ export function InviteCompaniesTab({
   onOnayTamamla,
   onYaklasikBedel,
 }: {
-  proje: { kart: Record<string, string>; ihaleEkipAtanan?: string }
+  proje: { kart: Record<string, string>; ihaleEkipAtanan?: string; keşif?: KesifSatiri[] }
   paket: IhalePaketi
   onKaldir: (firmaId: string) => void
   onDavet: (firmaId: string) => void
@@ -151,7 +151,8 @@ export function InviteCompaniesTab({
     const kesinTeminat = paket.alanlar?.ihKesinTeminatOrani
     const sozlesmeEkleri = sozlesmeBelgeleri.length
     const belgeler = paket.belgeler.length
-    const pozSayisi = kesifSatirSayisi(paket.keşif)
+    // Keşif proje düzeyindedir; paket şimdilik projenin keşfini okur
+    const pozSayisi = kesifSatirSayisi(proje.keşif ?? [])
     const sozlesmeTuru = sozlesmeTurleri.find((t) => t.id === paket.sozlesmeTuru)?.ad ?? '—'
 
     return [
@@ -168,7 +169,7 @@ export function InviteCompaniesTab({
       { etiket: 'Keşif', deger: `${pozSayisi} poz` },
       { etiket: 'Sorumlu', deger: sorumluAd(paket.sorumluId) },
     ]
-  }, [paket])
+  }, [paket, proje.keşif])
 
   const aramaSonuclari = useMemo(() => {
     const q = arama.trim().toLocaleLowerCase('tr')

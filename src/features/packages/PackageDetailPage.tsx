@@ -10,7 +10,6 @@ import { useStore } from '../../data/store'
 import type { IhalePaketi } from '../../data/types'
 import { InviteCompaniesTab } from './InviteCompaniesTab'
 import { PackageDocumentsTab } from './PackageDocumentsTab'
-import { TakeoffTable } from './TakeoffTable'
 import { TenderManagementPanel } from './TenderManagementPanel'
 import { QuestionAnswerTab } from './QuestionAnswerTab'
 import { IhaleOzeti } from './IhaleOzeti'
@@ -24,7 +23,7 @@ import { YayinlaDugmesi } from './YayinKapisi'
 export function PackageDetailPage() {
   const { id, paketId } = useParams()
   const navigate = useNavigate()
-  const { projeGetir, paketGetir, keşifGuncelle, altYukleniciKaldir, altYukleniciDavetEt, ihaleAksiyonu, paketYayinla, paketOnayaGonder, paketOnayTamamla, paketYaklasikBedel, paketKlasorEkle, paketKlasorYenidenAdlandir, soruEkle, soruCevapla, paketRevize } =
+  const { projeGetir, paketGetir, altYukleniciKaldir, altYukleniciDavetEt, ihaleAksiyonu, paketYayinla, paketOnayaGonder, paketOnayTamamla, paketYaklasikBedel, paketKlasorEkle, paketKlasorYenidenAdlandir, soruEkle, soruCevapla, paketRevize } =
     useStore()
 
   const proje = id ? projeGetir(id) : undefined
@@ -35,11 +34,16 @@ export function PackageDetailPage() {
   const [yayinOnizleme, setYayinOnizleme] = useState(false)
   const [gerekce, setGerekce] = useState('')
   // F5: yayın kapısı — kaydedilmiş keşif satırlarının doğrulaması (kurallar backend'de)
-  const kesifDogrulama = useKesifDogrulama(paket?.keşif ?? BOS_KESIF)
+  // Keşif proje düzeyindedir (Proje → Keşif sekmesi); paket şimdilik projenin keşfini okur
+  const kesifDogrulama = useKesifDogrulama(proje?.keşif ?? BOS_KESIF)
   const yayinKapisi = yayinKapisiHesapla(
     kesifDogrulama,
-    paket ? paket.keşif.filter((s) => !s.yorum && s.seviye !== 1).length : undefined,
+    proje ? (proje.keşif ?? []).filter((s) => !s.yorum && s.seviye !== 1).length : undefined,
   )
+  /** Projenin Keşif sekmesine gider (keşif hataları / boş keşif orada düzeltilir) */
+  const kesifeGit = () => {
+    if (proje) navigate(`${modulYolu('ihale', `/projeler/${proje.id}`)}?sekme=kesif`)
+  }
 
   if (!proje || !paket) {
     return (
@@ -80,7 +84,7 @@ export function PackageDetailPage() {
             <YayinlaDugmesi
               kapi={yayinKapisi}
               onYayinla={() => setYayinOnizleme(true)}
-              onKesifeGit={() => setSekme('kesif')}
+              onKesifeGit={kesifeGit}
               onTekrar={kesifDogrulama.yenile}
             />
           )}
@@ -96,7 +100,6 @@ export function PackageDetailPage() {
           items={[
             { key: 'genel', label: 'Genel Bakış' },
             { key: 'belgeler', label: 'Belgeler' },
-            { key: 'kesif', label: 'Keşif' },
             { key: 'firmalar', label: 'Alt Yüklenici Yönetimi' },
             { key: 'mukayese', label: 'Mukayeseli Karşılaştırma' },
             { key: 'ihale-yonetimi', label: 'İhale Yönetimi' },
@@ -107,9 +110,6 @@ export function PackageDetailPage() {
       </div>
 
       {sekme === 'genel' && <PaketGenelBakis proje={proje} paket={paket} />}
-      {sekme === 'kesif' && (
-        <TakeoffTable paket={paket} onKaydet={(satirlar, ekSutunlar, formuller) => keşifGuncelle(proje.id, paket.id, satirlar, ekSutunlar, formuller)} />
-      )}
       {sekme === 'belgeler' && (
         <PackageDocumentsTab
           paket={paket}
@@ -168,7 +168,7 @@ export function PackageDetailPage() {
 
       {sekme === 'firmalar' && (
         <InviteCompaniesTab
-          proje={{ kart: proje.kart, ihaleEkipAtanan: proje.ihaleEkipAtanan }}
+          proje={{ kart: proje.kart, ihaleEkipAtanan: proje.ihaleEkipAtanan, keşif: proje.keşif }}
           paket={paket}
           onKaldir={(firmaId) => altYukleniciKaldir(proje.id, paket.id, firmaId)}
           onDavet={(firmaId) => altYukleniciDavetEt(proje.id, paket.id, firmaId)}
@@ -185,7 +185,7 @@ export function PackageDetailPage() {
         kesifKapisi={yayinKapisi}
         onKesifeGit={() => {
           setYayinOnizleme(false)
-          setSekme('kesif')
+          kesifeGit()
         }}
         onClose={() => setYayinOnizleme(false)}
         onYayinla={() => paketYayinla(proje.id, paket.id)}

@@ -15,7 +15,6 @@ import { IhaleOzeti } from '../packages/IhaleOzeti'
 import { FirmaOnerSekmesi } from '../packages/FirmaOnerSekmesi'
 import { PackageDocumentsTab } from '../packages/PackageDocumentsTab'
 import { PackagePublishModal } from '../packages/PackagePublishModal'
-import { TakeoffTable } from '../packages/TakeoffTable'
 import { yayinKapisiHesapla } from '../../lib/yayinKapisi'
 import { YayinlaDugmesi } from '../packages/YayinKapisi'
 
@@ -30,7 +29,7 @@ import { YayinlaDugmesi } from '../packages/YayinKapisi'
 export function SantiyeciPackageDetailPage() {
   const { id, paketId } = useParams()
   const navigate = useNavigate()
-  const { projeGetir, paketGetir, keşifGuncelle, paketKlasorEkle, paketKlasorYenidenAdlandir, paketYayinla } =
+  const { projeGetir, paketGetir, paketKlasorEkle, paketKlasorYenidenAdlandir, paketYayinla } =
     useStore()
 
   const proje = id ? projeGetir(id) : undefined
@@ -38,11 +37,16 @@ export function SantiyeciPackageDetailPage() {
   const [sekme, setSekme] = useState('ihale-ozeti')
   const [yayinOnizleme, setYayinOnizleme] = useState(false)
   // F5: yayın kapısı — kaydedilmiş keşif satırlarının doğrulaması (kurallar backend'de)
-  const kesifDogrulama = useKesifDogrulama(paket?.keşif ?? BOS_KESIF)
+  // Keşif proje düzeyindedir (Proje → Keşif sekmesi); paket şimdilik projenin keşfini okur
+  const kesifDogrulama = useKesifDogrulama(proje?.keşif ?? BOS_KESIF)
   const yayinKapisi = yayinKapisiHesapla(
     kesifDogrulama,
-    paket ? paket.keşif.filter((s) => !s.yorum && s.seviye !== 1).length : undefined,
+    proje ? (proje.keşif ?? []).filter((s) => !s.yorum && s.seviye !== 1).length : undefined,
   )
+  /** Projenin Keşif sekmesine gider (keşif hataları / boş keşif orada düzeltilir) */
+  const kesifeGit = () => {
+    if (proje) navigate(`${modulYolu('santiyeci', `/projeler/${proje.id}`)}?sekme=kesif`)
+  }
 
   /* Erişim — yalnızca şantiyecinin kendi paketleri */
   const erisimVar = paket
@@ -114,7 +118,7 @@ export function SantiyeciPackageDetailPage() {
             <YayinlaDugmesi
               kapi={yayinKapisi}
               onYayinla={() => setYayinOnizleme(true)}
-              onKesifeGit={() => setSekme('kesif')}
+              onKesifeGit={kesifeGit}
               onTekrar={kesifDogrulama.yenile}
             />
           )}
@@ -130,7 +134,6 @@ export function SantiyeciPackageDetailPage() {
           items={[
             { key: 'ihale-ozeti', label: 'İhale Özeti' },
             { key: 'belgeler', label: 'Belgeler' },
-            { key: 'kesif', label: 'Keşif' },
             { key: 'firma-oneri', label: 'Alt Yüklenici Firma Öneri' },
           ]}
         />
@@ -140,10 +143,6 @@ export function SantiyeciPackageDetailPage() {
         <div className="space-y-5">
           <IhaleOzeti alanlar={paket.alanlar ?? {}} />
         </div>
-      )}
-
-      {sekme === 'kesif' && (
-        <TakeoffTable paket={paket} onKaydet={(satirlar, ekSutunlar, formuller) => keşifGuncelle(proje.id, paket.id, satirlar, ekSutunlar, formuller)} />
       )}
 
       {sekme === 'belgeler' && (
@@ -164,7 +163,7 @@ export function SantiyeciPackageDetailPage() {
         kesifKapisi={yayinKapisi}
         onKesifeGit={() => {
           setYayinOnizleme(false)
-          setSekme('kesif')
+          kesifeGit()
         }}
         onClose={() => setYayinOnizleme(false)}
         onYayinla={() => paketYayinla(proje.id, paket.id)}

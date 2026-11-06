@@ -1,6 +1,5 @@
-import { kesifSatirSayisi } from '../../lib/kesifSatir'
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Icon } from '../../components/ui/Icon'
@@ -16,6 +15,7 @@ import { bilgiDurumu } from '../../lib/proje'
 import { sozlesmeTuruBul } from '../../data/sozlesmeTurleri'
 import { modulYolu } from '../../lib/modul'
 import { PackageCreateModal } from '../packages/PackageCreateModal'
+import { TakeoffTable } from '../packages/TakeoffTable'
 import { PackagePublishModal } from '../packages/PackagePublishModal'
 import { ProjectEditModal, ProjectInfoSummary } from '../projects/ProjectEditModal'
 
@@ -48,11 +48,17 @@ export function SantiyeciProjectDetailPage() {
     paketYayinla,
     paketDurum,
     kartGuncelle,
+    projeKesifGuncelle,
     projeArsivle,
   } = useStore()
 
   const proje = id ? projeGetir(id) : undefined
-  const [sekme, setSekme] = useState('paketler')
+  // Başka sayfalardan `?sekme=kesif` ile doğrudan bir sekmede açılabilir
+  const [aramaParametreleri] = useSearchParams()
+  const [sekme, setSekme] = useState(() => {
+    const istenen = aramaParametreleri.get('sekme')
+    return sekmeler.some((s) => s.key === istenen) ? (istenen as string) : 'paketler'
+  })
   const [arama, setArama] = useState('')
   const [olusturOpen, setOlusturOpen] = useState(false)
   const [duzenlenen, setDuzenlenen] = useState<IhalePaketi | null>(null)
@@ -199,7 +205,7 @@ export function SantiyeciProjectDetailPage() {
                         <td className="px-5 py-4">
                           <span className="block font-bold text-black">{k.ad}</span>
                           <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                            {kesifSatirSayisi(k.keşif)} poz · {k.belgeler.length} belge
+                            {k.belgeler.length} belge
                           </span>
                         </td>
                         <td className="px-5 py-4">
@@ -293,7 +299,21 @@ export function SantiyeciProjectDetailPage() {
       )}
 
       {/* ---------------- Diğer sekmeler ---------------- */}
-      {sekme !== 'paketler' && sekme !== 'proje-bilgileri' && (
+      {/* ---------------- Keşif (proje düzeyinde) ---------------- */}
+      {sekme === 'kesif' && (
+        <TakeoffTable
+          kaynak={{
+            id: proje.id,
+            ad: proje.ad,
+            keşif: proje.keşif ?? [],
+            kesifSutunlari: proje.kesifSutunlari,
+            kesifSutunFormulleri: proje.kesifSutunFormulleri,
+          }}
+          onKaydet={(satirlar, ekSutunlar, formuller) => projeKesifGuncelle(proje.id, satirlar, ekSutunlar, formuller)}
+        />
+      )}
+
+      {sekme !== 'paketler' && sekme !== 'proje-bilgileri' && sekme !== 'kesif' && (
         <Card>
           <div className="flex flex-col items-center gap-3 py-14 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted text-ink">

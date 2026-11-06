@@ -45,6 +45,48 @@ için: [`docs/DAYITIM.md`](docs/DAYITIM.md).
 > Şu an tüm veriler tarayıcı belleğinde (mock). Gerçek kullanım için backend gerekir; ekip ile paylaşılan
 > “demo link” için yukarıdaki statik yayın yeterlidir.
 
+### Keşif backend'i (Ark.Api) — Excel içe/dışa aktarma ve doğrulama
+
+Keşif sihirbazı, doğrulama ve dışa aktarma `ark-insaat-projeler/services/api` içindeki `/api/excel/survey/*`
+uçlarını kullanır. Bu uçlar **durumsuzdur** (Postgres/Redis/Kafka gerektirmez). Arayüz API adresini şu sırayla seçer:
+
+1. Tarayıcıda kayıtlı adres — adres çubuğuna `?api=https://…` ekleyerek bir kez verilir
+2. Derleme zamanı `VITE_API_URL` (Netlify → Site settings → Environment variables)
+3. Boş → göreli `/api/...` (yerelde Vite proxy `localhost:5080`; Netlify'da `netlify.toml` rewrite'ı ile)
+
+**Yayındaki arayüzü kendi bilgisayarınızdaki backend'e bağlama**
+
+```bash
+# 1) Backend'i açın (yalnızca Excel uçları için DB/Redis/Kafka gerekmez)
+cd ark-insaat-projeler/services/api
+Cors__Origins__0=https://<site>.netlify.app dotnet run --urls http://localhost:5080
+
+# 2) HTTPS tüneli açın (Safari/Chrome karışık içerik ve yerel ağ kısıtları için en güvenlisi)
+cloudflared tunnel --url http://localhost:5080        # → https://abc.trycloudflare.com
+
+# 3) Yayındaki siteyi bir kez bu adresle açın (kaydedilir, adres çubuğundan silinir)
+#    https://<site>.netlify.app/?api=https://abc.trycloudflare.com
+#    Kaydı silmek için: ?api=
+```
+
+> `Cors__Origins__0` değeri tarayıcıdaki sitenin origin'i olmalıdır (şema + alan adı, sonda `/` yok).
+> Tünel adresi her açılışta değişir; yeni adresle `?api=` tekrar verilir.
+
+**Backend'i kalıcı yayınlama (Docker)**
+
+```bash
+cd ark-insaat-projeler
+docker build -f services/api/Dockerfile -t ark-api:local .   # bağlam = çalışma alanı kökü
+docker run -p 8080:8080 \
+  -e Cors__Origins__0=https://<site>.netlify.app \
+  -e ConnectionStrings__Default="Host=…;Database=…;Username=…;Password=…" \
+  -e Jwt__SigningKey="<en az 32 karakterlik gizli anahtar>" \
+  ark-api:local
+```
+
+Sonra Netlify'da `VITE_API_URL=https://<api-alan-adı>` ortam değişkenini tanımlayıp siteyi yeniden derleyin
+(ya da `netlify.toml`'a `/api/*` → backend rewrite'ı ekleyin; bu durumda CORS gerekmez).
+
 ---
 
 ## Ekran haritası

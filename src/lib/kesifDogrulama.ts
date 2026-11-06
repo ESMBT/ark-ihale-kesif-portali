@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SpreadsheetCellMark } from '@ark/ui-kit'
 import type { KesifSatiri } from '../data/types'
 import { levelDegeri } from './kesifSatir'
+import { excelApiTaban } from './apiKok'
 
 /* ------------------------------------------------------------------ *
  * Keşif doğrulama istemcisi (F1)
@@ -13,7 +14,7 @@ import { levelDegeri } from './kesifSatir'
  * çağrıyı yapar ve sonucu bir hook ile sunar. Kural mantığı burada YOKTUR.
  * ------------------------------------------------------------------ */
 
-const EXCEL_API_BASE = '/api/excel/survey'
+
 
 export type DogrulamaOnemi = 'Error' | 'Warning'
 
@@ -239,7 +240,7 @@ export class DogrulamaHatasi extends Error {
 async function istek<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response
   try {
-    response = await fetch(`${EXCEL_API_BASE}${path}`, init)
+    response = await fetch(`${excelApiTaban()}${path}`, init)
   } catch {
     throw new DogrulamaHatasi('Doğrulama servisine ulaşılamadı.', true)
   }

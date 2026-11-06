@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 import type { KesifEkSutun, KesifSatiri } from '../data/types'
 import { disaAktarimIstegi, disaAktarimTablosu } from './kesifSutunlar'
+import { excelApiTaban } from './apiKok'
 
 export const KESIF_SABLON_BASLIKLARI = [
   'Level',
@@ -119,7 +120,7 @@ export type ImportSonucu = {
   belge?: SurveyDocumentDto
 }
 
-const EXCEL_API_BASE = '/api/excel/survey'
+
 
 /** Ark.Excel SurveyDocument modelini portalın KesifSatiri[] yapısına dönüştürür */
 export function surveyDocumentToKesifSatirlari(doc: SurveyDocumentDto): KesifSatiri[] {
@@ -386,7 +387,7 @@ function blobIndir(blob: Blob, dosyaAdi: string) {
 /** Standart "Excel Keşif" çalışma dosyasını Ark.Excel üzerinden indirir */
 export async function kesifSablonuIndir() {
   try {
-    const res = await fetch(`${EXCEL_API_BASE}/template`)
+    const res = await fetch(`${excelApiTaban()}/template`)
     if (res.ok) {
       const blob = await res.blob()
       blobIndir(blob, 'Excel_Kesif_Calisma_Dosyasi.xlsx')
@@ -472,7 +473,7 @@ async function excelIstegi<T>(path: string, file: File): Promise<T> {
 
   let response: Response
   try {
-    response = await fetch(`${EXCEL_API_BASE}${path}`, { method: 'POST', body: formData })
+    response = await fetch(`${excelApiTaban()}${path}`, { method: 'POST', body: formData })
   } catch {
     throw new ExcelServisHatasi(
       'Ark.Excel servisine ulaşılamadı. Servisin çalıştığından emin olup tekrar deneyin.',
@@ -536,7 +537,7 @@ export async function kesifDosyasiOku(file: File): Promise<ImportSonucu> {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await fetch(`${EXCEL_API_BASE}/import`, {
+    const response = await fetch(`${excelApiTaban()}/import`, {
       method: 'POST',
       body: formData,
     })
@@ -709,7 +710,7 @@ export async function kesifDisaAktar(
   // Portaldaki yapıyla (Level, Poz Kodu, özel sütunlar) yazılır; dosya sihirbazla geri içe aktarılabilir
   const istek = disaAktarimIstegi(satirlar, ekSutunlar, projeKodu, formuller)
   try {
-    const res = await fetch(`${EXCEL_API_BASE}/export-table`, {
+    const res = await fetch(`${excelApiTaban()}/export-table`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(istek),

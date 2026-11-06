@@ -1,0 +1,46 @@
+.control {
+  width: 100%;
+  min-height: 76px;
+  padding: var(--ark-space-3) var(--ark-space-4);
+  border: 1px solid var(--ark-color-border-strong);
+  border-radius: var(--ark-radius-md);
+  background-color: var(--ark-color-surface);
+  color: var(--ark-color-text);
+  font-family: inherit;
+  font-size: var(--ark-font-size-md);
+  line-height: var(--ark-line-height-normal);
+  resize: vertical;
+  transition:
+    border-color var(--ark-transition-fast),
+    box-shadow var(--ark-transition-fast);
+}
+
+.control::placeholder {
+  color: var(--ark-color-text-muted);
+}
+
+.control:focus {
+  outline: none;
+  border-color: var(--ark-color-primary);
+  box-shadow: 0 0 0 var(--ark-ring-width) var(--ark-color-primary-soft);
+}
+
+.control:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 1px;
+}
+
+.control:disabled {
+  background-color: var(--ark-color-surface-muted);
+  color: var(--ark-color-text-muted);
+  cursor: not-allowed;
+}
+
+.invalid,
+.invalid:focus {
+  border-color: var(--ark-color-danger);
+}
+
+.invalid:focus {
+  box-shadow: 0 0 0 var(--ark-ring-width) var(--ark-color-danger-soft);
+}

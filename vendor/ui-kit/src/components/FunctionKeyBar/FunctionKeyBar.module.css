@@ -1,0 +1,102 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-3);
+  min-height: 40px;
+  padding: var(--ark-space-1) var(--ark-space-3);
+  color: var(--ark-color-text);
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-sm);
+}
+
+.leading {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-2);
+  min-width: 0;
+  color: var(--ark-color-text-muted);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.keys {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-2);
+}
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ark-space-2);
+  height: 30px;
+  padding: 0 var(--ark-space-3) 0 var(--ark-space-1);
+  border: 1px solid var(--ark-color-border-strong);
+  border-radius: var(--ark-radius-md);
+  background-color: var(--ark-color-surface);
+  color: var(--ark-color-text);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--ark-transition-fast),
+    border-color var(--ark-transition-fast);
+}
+
+.key:hover:not(:disabled) {
+  background-color: var(--ark-color-surface-muted);
+  border-color: var(--ark-color-primary-border);
+}
+
+.key:active:not(:disabled) {
+  box-shadow: var(--ark-shadow-control-pressed);
+}
+
+.key:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 2px;
+}
+
+.key:disabled {
+  background-color: var(--ark-color-disabled-bg);
+  color: var(--ark-color-disabled-text);
+  cursor: not-allowed;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--ark-color-border-strong);
+  border-radius: var(--ark-radius-sm);
+  background-color: var(--ark-color-surface-muted);
+  color: var(--ark-color-text-muted);
+  font-family: var(--ark-font-mono);
+  font-size: var(--ark-font-size-xs);
+  font-weight: var(--ark-font-weight-semibold);
+}
+
+.key[data-tone='accent'] {
+  border-color: var(--ark-color-primary);
+  background-color: var(--ark-color-primary);
+  color: var(--ark-color-primary-contrast);
+}
+
+.key[data-tone='accent']:hover:not(:disabled) {
+  background-color: var(--ark-color-primary-hover);
+}
+
+.key[data-tone='accent'] .kbd {
+  border-color: rgb(255 255 255 / 0.4);
+  background-color: rgb(255 255 255 / 0.18);
+  color: inherit;
+}
+
+.key[data-tone='danger'] .kbd {
+  border-color: var(--ark-color-danger-border);
+  background-color: var(--ark-color-danger-soft);
+  color: var(--ark-color-danger);
+}

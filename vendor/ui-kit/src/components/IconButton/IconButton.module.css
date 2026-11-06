@@ -1,0 +1,111 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ark-radius-md);
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color var(--ark-transition-fast),
+    border-color var(--ark-transition-fast),
+    color var(--ark-transition-fast),
+    box-shadow var(--ark-transition-fast);
+}
+
+.button:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.loading {
+  cursor: progress;
+}
+
+.content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --------------------------------------------------------------- boyutlar */
+.sm {
+  width: 32px;
+  height: 32px;
+}
+
+.md {
+  width: 40px;
+  height: 40px;
+}
+
+.lg {
+  width: 48px;
+  height: 48px;
+}
+
+/* --------------------------------------------------------------- varyantlar */
+/* Button ile ayni tasarim dili: primary = Figma "Primary" (siyah dolgu). */
+.primary {
+  background-color: var(--ark-color-control-bg);
+  border-color: var(--ark-color-control-border);
+  color: var(--ark-color-control-text);
+  box-shadow: var(--ark-shadow-control);
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--ark-color-control-hover-bg);
+  box-shadow: var(--ark-shadow-control-hover);
+}
+
+.primary:active:not(:disabled) {
+  background-color: var(--ark-color-control-bg);
+  box-shadow: var(--ark-shadow-control-pressed);
+}
+
+.primary:disabled {
+  background-color: var(--ark-color-disabled-bg);
+  border-color: var(--ark-color-disabled-bg);
+  color: var(--ark-color-disabled-text);
+  box-shadow: none;
+}
+
+.secondary {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--ark-color-control-subtle-text);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--ark-color-surface-muted);
+}
+
+.ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--ark-color-text);
+}
+
+.ghost:hover:not(:disabled) {
+  background-color: var(--ark-color-surface-muted);
+}
+
+.danger {
+  background-color: var(--ark-color-danger);
+  color: var(--ark-color-danger-contrast);
+}
+
+.danger:hover:not(:disabled) {
+  background-color: var(--ark-color-danger-hover);
+}
+
+
+

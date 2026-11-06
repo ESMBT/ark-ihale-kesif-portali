@@ -1,0 +1,115 @@
+.field {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--ark-space-3);
+  cursor: pointer;
+}
+
+.disabled {
+  cursor: not-allowed;
+}
+
+.track {
+  position: relative;
+  flex: none;
+  border: 1px solid var(--ark-color-border-strong);
+  border-radius: var(--ark-radius-full);
+  background-color: var(--ark-color-surface-muted);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background-color var(--ark-transition-base),
+    border-color var(--ark-transition-base);
+}
+
+.track:hover:not(:disabled) {
+  border-color: var(--ark-color-primary);
+}
+
+.track:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 2px;
+}
+
+.track:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.checked {
+  background-color: var(--ark-color-primary);
+  border-color: var(--ark-color-primary);
+}
+
+.thumb {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  background-color: var(--ark-color-surface);
+  border-radius: var(--ark-radius-full);
+  box-shadow: var(--ark-shadow-sm);
+  /* Yalnizca transform animasyonlanir: konum `left` ile degistirilirse
+     topak aninda ziplar, kayma efekti bozulur. */
+  transform: translateY(-50%);
+  transition: transform var(--ark-transition-base);
+}
+
+.checked .thumb {
+  transform: translate(var(--ark-switch-travel), -50%);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ark-space-1);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--ark-font-size-sm);
+  font-weight: var(--ark-font-weight-medium);
+  color: var(--ark-color-text);
+}
+
+.disabled .label {
+  color: var(--ark-color-text-muted);
+}
+
+.description {
+  font-size: var(--ark-font-size-xs);
+  color: var(--ark-color-text-muted);
+}
+
+/* --------------------------------------------------------------- boyutlar */
+/* Seyir mesafesi: track genisligi - 2*kenarlik - 2*ic bosluk - topak genisligi.
+   Boylece topak her iki durumda da kenardan esit mesafede kalir. */
+.sm {
+  width: 32px;
+  height: 18px;
+  /* 32 - 2 - 4 - 12 = 14 */
+  --ark-switch-travel: 14px;
+}
+
+.sm .thumb {
+  width: 12px;
+  height: 12px;
+}
+
+.md {
+  width: 42px;
+  height: 24px;
+  /* 42 - 2 - 4 - 18 = 18 */
+  --ark-switch-travel: 18px;
+}
+
+.md .thumb {
+  width: 18px;
+  height: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb,
+  .track {
+    transition-duration: 0.01ms;
+  }
+}

@@ -1,0 +1,33 @@
+.group {
+  display: flex;
+  flex-direction: row;
+  border-radius: var(--ark-radius-md);
+}
+
+.horizontal {
+  flex-direction: row;
+}
+
+.vertical {
+  flex-direction: column;
+}
+
+.start {
+  justify-content: flex-start;
+}
+
+.center {
+  justify-content: center;
+}
+
+.end {
+  justify-content: flex-end;
+}
+
+.justify {
+  justify-content: space-between;
+}
+
+.stretch > * {
+  flex: 1 1 0;
+}

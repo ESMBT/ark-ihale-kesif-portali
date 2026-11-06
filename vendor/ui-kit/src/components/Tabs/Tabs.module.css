@@ -1,0 +1,145 @@
+/*
+ * Figma "Design System" -> Tab elements
+ *   Default : label #767676 Helvetica 16/24, alt cizgi #767676 0.5px
+ *   Active  : label #303030 Helvetica 16/24, alt cizgi #303030 1px
+ *   Focus   : 1px #717171 cerceve, r=2, golge 0 1px 1.7px rgba(0,0,0,.25)
+ *   Yatay dolgu: 16px
+ */
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ark-space-4);
+}
+
+.list {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ark-space-1);
+}
+
+.tab {
+  position: relative;
+  padding: 0 var(--ark-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--ark-radius-xs);
+  background: transparent;
+  color: #767676;
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-md);
+  font-weight: var(--ark-font-weight-regular);
+  line-height: 24px;
+  cursor: pointer;
+  transition: color var(--ark-transition-fast), border-color var(--ark-transition-fast);
+}
+
+.tab::after {
+  content: '';
+  position: absolute;
+  right: var(--ark-space-4);
+  bottom: 0;
+  left: var(--ark-space-4);
+  height: 1px;
+  background-color: #767676;
+}
+
+.tab:hover:not(:disabled) {
+  color: #2c2c2c;
+}
+
+.tab:focus-visible {
+  outline: none;
+  border-color: var(--ark-ring-color);
+  box-shadow: 0 1px 1.7px rgb(0 0 0 / 0.25);
+}
+
+.tab:disabled {
+  cursor: not-allowed;
+  color: var(--ark-color-disabled-text);
+}
+
+.tab:disabled::after {
+  background-color: var(--ark-color-border);
+}
+
+.selected {
+  color: #303030;
+}
+
+.selected::after {
+  height: 2px;
+  background-color: #303030;
+}
+
+.panel {
+  color: var(--ark-color-text);
+}
+
+/* `fill`: ust kapsayicinin yuksekligini doldurur; panel icerigi sinirli yukseklik alir. */
+.fill {
+  height: 100%;
+  min-height: 0;
+  gap: var(--ark-space-2);
+}
+
+.fill .list {
+  padding: 0 var(--ark-space-3);
+}
+
+.fill .panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.fill .panel[hidden] {
+  display: none;
+}
+
+.panel:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 2px;
+}
+
+[data-theme='dark'] .tab {
+  color: var(--ark-color-text-muted);
+}
+
+[data-theme='dark'] .tab:hover:not(:disabled) {
+  color: var(--ark-color-text);
+}
+
+[data-theme='dark'] .tab::after {
+  background-color: var(--ark-color-text-muted);
+}
+
+[data-theme='dark'] .selected {
+  color: var(--ark-color-text);
+}
+
+[data-theme='dark'] .selected::after {
+  background-color: var(--ark-color-text);
+}
+
+/* Sistem koyu tema tercihi (data-theme tanimli degilse) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .tab {
+    color: var(--ark-color-text-muted);
+  }
+
+  :root:not([data-theme='light']) .tab:hover:not(:disabled) {
+    color: var(--ark-color-text);
+  }
+
+  :root:not([data-theme='light']) .tab::after {
+    background-color: var(--ark-color-text-muted);
+  }
+
+  :root:not([data-theme='light']) .selected {
+    color: var(--ark-color-text);
+  }
+
+  :root:not([data-theme='light']) .selected::after {
+    background-color: var(--ark-color-text);
+  }
+}

@@ -1,0 +1,90 @@
+.chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ark-space-3);
+  margin: 0;
+  font-family: var(--ark-font-sans);
+  color: var(--ark-color-text);
+}
+
+.title {
+  font-family: var(--ark-font-display);
+  font-size: var(--ark-font-size-md);
+  font-weight: var(--ark-font-weight-bold);
+}
+
+.svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.track {
+  stroke: var(--ark-color-surface-muted);
+}
+
+.segment {
+  transition:
+    opacity var(--ark-transition-base),
+    stroke-width var(--ark-transition-fast);
+}
+
+.centerLabel {
+  fill: var(--ark-color-text);
+  font-family: var(--ark-font-display);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.centerCaption {
+  fill: var(--ark-color-text-muted);
+  font-size: 5px;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--ark-font-size-xs);
+}
+
+.legendItem {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--ark-space-2);
+  padding: 3px var(--ark-space-2);
+  border-radius: var(--ark-radius-sm);
+}
+
+.legendActive {
+  background-color: var(--ark-color-surface-muted);
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.legendLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendValue,
+.legendPercent {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.legendPercent {
+  min-width: 52px;
+  color: var(--ark-color-text-muted);
+}

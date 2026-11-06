@@ -1,0 +1,245 @@
+.wrapper {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  overflow: auto;
+  background-color: var(--ark-color-surface);
+}
+
+.grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--ark-color-text);
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-sm);
+}
+
+.caption {
+  padding: var(--ark-space-2) var(--ark-space-3);
+  color: var(--ark-color-text-muted);
+  font-size: var(--ark-font-size-xs);
+  text-align: left;
+  caption-side: top;
+}
+
+/* ------------------------------------------------------------------ baslik */
+.head th {
+  position: sticky;
+  z-index: 2;
+  background-color: var(--ark-color-surface-muted);
+}
+
+.head tr:first-child th {
+  top: 0;
+}
+
+.groupRow + tr th {
+  top: 30px;
+}
+
+.headCell {
+  padding: 6px var(--ark-space-2);
+  border-bottom: 1px solid var(--ark-color-border-strong);
+  color: var(--ark-color-text-muted);
+  font-size: var(--ark-font-size-xs);
+  font-weight: var(--ark-font-weight-semibold);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.lines .headCell,
+.lines .cell,
+.lines .groupCell {
+  border-right: 1px solid var(--ark-color-border);
+}
+
+.groupCell {
+  height: 30px;
+  padding: 0 var(--ark-space-2);
+  border-bottom: 1px solid var(--ark-color-border);
+  background-color: var(--ark-color-border) !important;
+  color: var(--ark-color-text);
+  font-size: var(--ark-font-size-xs);
+  font-weight: var(--ark-font-weight-semibold);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.groupEmpty {
+  background-color: var(--ark-color-surface-muted) !important;
+}
+
+.groupCell[data-tone='strong'] {
+  background-color: var(--ark-color-primary-soft-strong) !important;
+  color: var(--ark-color-primary-active);
+}
+
+.groupCell[data-tone='success'] {
+  background-color: var(--ark-color-success-border) !important;
+  color: var(--ark-color-success-deep);
+}
+
+.groupCell[data-tone='warning'] {
+  background-color: var(--ark-color-warning-border) !important;
+  color: var(--ark-color-warning-deep);
+}
+
+/* ------------------------------------------------------------------ govde */
+.cell {
+  padding: 8px var(--ark-space-2);
+  border-bottom: 1px solid var(--ark-color-border);
+  vertical-align: top;
+  background-color: var(--ark-color-surface);
+}
+
+.dense .cell {
+  padding: 4px var(--ark-space-2);
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.row {
+  outline: none;
+}
+
+.row:hover .cell {
+  background-color: var(--ark-color-row-hover);
+}
+
+.selectable {
+  cursor: pointer;
+}
+
+.selectable:focus-visible .cell:first-child {
+  box-shadow: inset 2px 0 0 var(--ark-color-primary);
+}
+
+.row[data-tone='highlight'] .cell {
+  background-color: var(--ark-color-row-highlight);
+}
+
+.row[data-tone='preferred'] .cell {
+  background-color: var(--ark-color-row-preferred);
+}
+
+.row[data-tone='danger'] .cell {
+  background-color: var(--ark-color-danger-soft);
+}
+
+.row[data-tone='muted'] .cell {
+  color: var(--ark-color-text-subtle);
+}
+
+.row[data-selected] .cell,
+.row[data-selected]:hover .cell {
+  background-color: var(--ark-color-row-selected);
+}
+
+.row[data-selected] .cell:first-child {
+  box-shadow: inset 3px 0 0 var(--ark-color-primary);
+}
+
+/* ------------------------------------------------------- hiyerarsi seviyeleri */
+.row[data-level='1'] .cell {
+  background-color: var(--ark-color-level-1-soft);
+  color: var(--ark-color-level-1);
+  font-weight: var(--ark-font-weight-bold);
+  text-transform: uppercase;
+}
+
+.row[data-level='2'] .cell {
+  color: var(--ark-color-level-2);
+  font-weight: var(--ark-font-weight-bold);
+  text-transform: uppercase;
+}
+
+.row[data-level='3'] .cell {
+  color: var(--ark-color-level-3);
+  font-style: italic;
+}
+
+.row[data-level='4'] .cell {
+  color: var(--ark-color-level-4);
+  font-weight: var(--ark-font-weight-bold);
+  text-transform: uppercase;
+}
+
+.row[data-level][data-selected] .cell {
+  background-color: var(--ark-color-row-selected);
+}
+
+/* --------------------------------------------------------------- hucre tonu */
+.cell[data-tone='muted'] {
+  color: var(--ark-color-text-subtle);
+}
+
+.cell[data-tone='attention'] {
+  color: var(--ark-color-attention);
+}
+
+.cell[data-tone='positive'] {
+  color: var(--ark-color-success);
+}
+
+.cell[data-tone='negative'] {
+  color: var(--ark-color-danger);
+}
+
+.cell[data-tone='strong'] {
+  font-weight: var(--ark-font-weight-bold);
+}
+
+/* ---------------------------------------------------------- sutun vurgusu */
+.cell[data-emphasis] {
+  background-color: var(--ark-color-row-preferred);
+}
+
+.row[data-selected] .cell[data-emphasis] {
+  background-color: var(--ark-color-row-selected);
+}
+
+.head th[data-emphasis] {
+  background-color: var(--ark-color-success-border);
+  color: var(--ark-color-success-deep);
+}
+
+/* ------------------------------------------------------------------ toplam */
+.foot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  border-top: 1px solid var(--ark-color-border-strong);
+  background-color: var(--ark-color-surface-muted) !important;
+  font-weight: var(--ark-font-weight-bold);
+}
+
+.totalLabel {
+  padding: 8px var(--ark-space-3);
+  text-align: right;
+}
+
+.totalCell {
+  color: var(--ark-color-text);
+}
+
+.empty {
+  padding: var(--ark-space-8) var(--ark-space-4);
+  color: var(--ark-color-text-muted);
+  text-align: center;
+}
+
+.left {
+  text-align: left;
+}
+
+.center {
+  text-align: center;
+}
+
+.right {
+  text-align: right;
+}

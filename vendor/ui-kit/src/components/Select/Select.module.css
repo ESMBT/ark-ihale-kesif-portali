@@ -1,0 +1,59 @@
+.control {
+  width: 100%;
+  padding-right: var(--ark-space-8);
+  border: 1px solid var(--ark-color-border-strong);
+  border-radius: var(--ark-radius-md);
+  background-color: var(--ark-color-surface);
+  color: var(--ark-color-text);
+  font-family: inherit;
+  line-height: var(--ark-line-height-normal);
+  cursor: pointer;
+  transition:
+    border-color var(--ark-transition-fast),
+    box-shadow var(--ark-transition-fast);
+}
+
+.control:focus {
+  outline: none;
+  border-color: var(--ark-color-primary);
+  box-shadow: 0 0 0 var(--ark-ring-width) var(--ark-color-primary-soft);
+}
+
+.control:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 1px;
+}
+
+.control:disabled {
+  background-color: var(--ark-color-surface-muted);
+  color: var(--ark-color-text-muted);
+  cursor: not-allowed;
+}
+
+.invalid,
+.invalid:focus {
+  border-color: var(--ark-color-danger);
+}
+
+.invalid:focus {
+  box-shadow: 0 0 0 var(--ark-ring-width) var(--ark-color-danger-soft);
+}
+
+/* --------------------------------------------------------------- boyutlar */
+.sm {
+  height: 32px;
+  padding: 0 var(--ark-space-2) 0 var(--ark-space-3);
+  font-size: var(--ark-font-size-sm);
+}
+
+.md {
+  height: 40px;
+  padding: 0 var(--ark-space-2) 0 var(--ark-space-3);
+  font-size: var(--ark-font-size-md);
+}
+
+.lg {
+  height: 48px;
+  padding: 0 var(--ark-space-3) 0 var(--ark-space-4);
+  font-size: var(--ark-font-size-lg);
+}

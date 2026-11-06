@@ -1,0 +1,74 @@
+/*
+ * @ark/ui-kit — calisma alani (workspace) tokenlari
+ * ---------------------------------------------------------------------------
+ * Pencere, veri izgarasi, menu ve grafik bilesenleri icin ek tokenlar.
+ * `tokens.css` Figma'dan uretildigi icin (scripts/figma-extract.mjs) bu degerler
+ * ayri bir dosyada tutulur; bastan uretimde ezilmez. Tum degerler mevcut marka
+ * tokenlarindan turetilir, koyu tema otomatik uyum saglar.
+ */
+
+:root {
+  /* Hiyerarsi seviyeleri (bolum > alt bolum > grup > toplam satiri) */
+  --ark-color-level-1: var(--ark-color-danger);
+  --ark-color-level-2: var(--ark-color-primary);
+  --ark-color-level-3: var(--ark-color-success);
+  --ark-color-level-4: var(--ark-color-warning-active);
+  --ark-color-level-1-soft: var(--ark-color-warning-soft);
+
+  /* Satir durumlari */
+  --ark-color-row-hover: var(--ark-color-surface-muted);
+  --ark-color-row-selected: var(--ark-color-primary-soft);
+  --ark-color-row-highlight: color-mix(in srgb, var(--ark-color-warning) 16%, var(--ark-color-surface));
+  --ark-color-row-preferred: var(--ark-color-success-soft);
+
+  /* Fiyatlanmamis / dikkat gerektiren metin */
+  --ark-color-attention: #a01f8a;
+
+  /* Pencere "chrome" (baslik cubugu) */
+  --ark-chrome-bg: var(--ark-color-primary-active);
+  --ark-chrome-bg-band: var(--ark-color-primary-hover);
+  --ark-chrome-fg: #ffffff;
+  --ark-chrome-fg-muted: rgb(255 255 255 / 0.72);
+
+  /* Grafik paleti (donut / gantt) */
+  --ark-chart-1: #0671e0;
+  --ark-chart-2: #009262;
+  --ark-chart-3: #e48900;
+  --ark-chart-4: #c33025;
+  --ark-chart-5: #7b4fd1;
+  --ark-chart-6: #0e8aa5;
+  --ark-chart-7: #89939e;
+
+  /* Yogun (dense) satir yuksekligi */
+  --ark-row-height-dense: 28px;
+}
+
+[data-theme='dark'] {
+  --ark-color-level-4: var(--ark-color-warning);
+  --ark-color-attention: #e58ad6;
+  --ark-chrome-bg: #24324a;
+  --ark-chrome-bg-band: #2d3d59;
+  --ark-chart-1: #4e9bff;
+  --ark-chart-2: #32c997;
+  --ark-chart-3: #ffa826;
+  --ark-chart-4: #ff5a4f;
+  --ark-chart-5: #a98aff;
+  --ark-chart-6: #4cc4de;
+  --ark-chart-7: #a8b0b8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ark-color-level-4: var(--ark-color-warning);
+    --ark-color-attention: #e58ad6;
+    --ark-chrome-bg: #24324a;
+    --ark-chrome-bg-band: #2d3d59;
+    --ark-chart-1: #4e9bff;
+    --ark-chart-2: #32c997;
+    --ark-chart-3: #ffa826;
+    --ark-chart-4: #ff5a4f;
+    --ark-chart-5: #a98aff;
+    --ark-chart-6: #4cc4de;
+    --ark-chart-7: #a8b0b8;
+  }
+}

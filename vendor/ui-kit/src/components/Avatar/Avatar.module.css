@@ -1,0 +1,44 @@
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--ark-radius-full);
+  background-color: var(--ark-color-primary-soft);
+  color: var(--ark-color-primary);
+  font-weight: var(--ark-font-weight-semibold);
+  line-height: 1;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.xs {
+  width: 24px;
+  height: 24px;
+  font-size: var(--ark-font-size-xs);
+}
+
+.sm {
+  width: 32px;
+  height: 32px;
+  font-size: var(--ark-font-size-sm);
+}
+
+.md {
+  width: 40px;
+  height: 40px;
+  font-size: var(--ark-font-size-md);
+}
+
+.lg {
+  width: 56px;
+  height: 56px;
+  font-size: var(--ark-font-size-xl);
+}

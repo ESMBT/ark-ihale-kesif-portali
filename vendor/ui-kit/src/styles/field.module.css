@@ -1,0 +1,51 @@
+/*
+ * Form alanlarinin (Input / Textarea / Select) ortak yerlesim ve mesaj stilleri.
+ * Kontrolun kendi gorunumu ilgili bilesen modulinde tanimlidir.
+ *
+ * Figma "Design System" -> Input Field (272x70)
+ *   Label       : #1E1E1E, Helvetica 16/22
+ *   Description : #757575, 16/22
+ *   Input       : 40px yukseklik, fill #FFFFFF, stroke #D9D9D9 1px, r=5, pad 16/12
+ *   Value       : #B3B3B3 (placeholder), 16/16
+ *   Error       : 16/22
+ */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ark-space-2);
+  width: 100%;
+}
+
+.label {
+  font-size: var(--ark-font-size-md);
+  font-weight: var(--ark-font-weight-regular);
+  line-height: 22px;
+  color: #1e1e1e;
+}
+
+.required {
+  color: var(--ark-color-danger);
+}
+
+.hint {
+  font-size: var(--ark-font-size-md);
+  line-height: 22px;
+  color: #757575;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-1);
+  font-size: var(--ark-font-size-md);
+  line-height: 22px;
+  color: var(--ark-color-danger);
+}
+
+[data-theme='dark'] .label {
+  color: var(--ark-color-text);
+}
+
+[data-theme='dark'] .hint {
+  color: var(--ark-color-text-muted);
+}

@@ -22,7 +22,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@ark/ui-kit": ["../ark-insaat-projeler/libs/frontend/ui-kit/src/index.ts"]
+      "@ark/ui-kit": ["./vendor/ui-kit/src/index.ts"]
     }
   },
   "include": ["src"]

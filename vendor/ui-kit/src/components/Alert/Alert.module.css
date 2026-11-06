@@ -1,0 +1,115 @@
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ark-space-3);
+  padding: var(--ark-space-3) var(--ark-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--ark-radius-md);
+  font-size: var(--ark-font-size-sm);
+  line-height: var(--ark-line-height-normal);
+}
+
+.icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ark-space-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--ark-font-size-sm);
+  font-weight: var(--ark-font-weight-semibold);
+}
+
+.message {
+  margin: 0;
+}
+
+.dismiss {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ark-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity var(--ark-transition-fast), background-color var(--ark-transition-fast);
+}
+
+.dismiss:hover {
+  opacity: 1;
+  background-color: rgb(15 23 42 / 0.06);
+}
+
+.dismiss:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 1px;
+}
+
+/* --------------------------------------------------------------- varyantlar */
+.info {
+  background-color: var(--ark-color-info-soft);
+  border-color: var(--ark-color-info-soft);
+  color: var(--ark-color-info);
+}
+
+.success {
+  background-color: var(--ark-color-success-soft);
+  border-color: var(--ark-color-success-soft);
+  color: var(--ark-color-success);
+}
+
+.warning {
+  background-color: var(--ark-color-warning-soft);
+  border-color: var(--ark-color-warning-soft);
+  color: var(--ark-color-warning);
+}
+
+.danger {
+  background-color: var(--ark-color-danger-soft);
+  border-color: var(--ark-color-danger-soft);
+  color: var(--ark-color-danger);
+}
+
+.info .title,
+.info .message,
+.success .title,
+.success .message {
+  color: var(--ark-color-text);
+}
+
+.warning .title {
+  color: var(--ark-color-text);
+}
+
+.warning .message {
+  color: var(--ark-color-text);
+}
+
+.danger .title {
+  color: var(--ark-color-text);
+}
+
+.danger .message {
+  color: var(--ark-color-text);
+}

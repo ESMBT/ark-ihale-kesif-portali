@@ -8,10 +8,12 @@
     "build": "node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build",
     "build:relative": "VITE_BASE=./ node node_modules/vite/bin/vite.js build",
     "lint": "node node_modules/oxlint/bin/oxlint",
+    "sync:ui-kit": "node scripts/sync-ui-kit.mjs",
     "preview": "node node_modules/vite/bin/vite.js preview"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "clsx": "^2.1.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.5",

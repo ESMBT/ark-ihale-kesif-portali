@@ -1,0 +1,123 @@
+.window {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--ark-color-border-strong);
+  border-radius: var(--ark-radius-lg);
+  background-color: var(--ark-color-surface);
+  box-shadow: var(--ark-shadow-md);
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-2);
+  min-height: 36px;
+  padding: 0 var(--ark-space-2) 0 var(--ark-space-3);
+  background-color: var(--ark-chrome-bg);
+  color: var(--ark-chrome-fg);
+  user-select: none;
+  transition: background-color var(--ark-transition-fast);
+}
+
+.inactive .titlebar {
+  background-color: var(--ark-color-text-subtle);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--ark-font-display);
+  font-size: var(--ark-font-size-sm);
+  font-weight: var(--ark-font-weight-semibold);
+  line-height: var(--ark-line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.back,
+.controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ark-radius-sm);
+  background: transparent;
+  color: var(--ark-chrome-fg-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--ark-transition-fast),
+    color var(--ark-transition-fast);
+}
+
+.back {
+  margin-left: calc(var(--ark-space-1) * -1);
+}
+
+.back:hover,
+.controls button:hover {
+  background-color: rgb(255 255 255 / 0.16);
+  color: var(--ark-chrome-fg);
+}
+
+.controls button[data-close]:hover {
+  background-color: var(--ark-color-danger);
+}
+
+.back:focus-visible,
+.controls button:focus-visible {
+  outline: 2px solid var(--ark-chrome-fg);
+  outline-offset: -2px;
+}
+
+.controls {
+  display: flex;
+  gap: 2px;
+}
+
+.menu {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--ark-color-border);
+  background-color: var(--ark-color-surface);
+}
+
+.toolbar {
+  border-bottom: 1px solid var(--ark-color-border);
+  background-color: var(--ark-color-surface);
+}
+
+.band {
+  padding: var(--ark-space-1) var(--ark-space-3);
+  background-color: var(--ark-chrome-bg-band);
+  color: var(--ark-chrome-fg);
+  font-size: var(--ark-font-size-sm);
+  font-weight: var(--ark-font-weight-semibold);
+  text-align: center;
+}
+
+/* Govde dikey flex'tir: `DataGrid` gibi doldurabilen cocuklar sinirli yukseklik alip
+   kendi basina kayar (yapiskan baslik / toplam satiri bu sayede calisir). */
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  background-color: var(--ark-color-surface);
+}
+
+.scroll {
+  overflow: auto;
+}
+
+.footer {
+  border-top: 1px solid var(--ark-color-border);
+  background-color: var(--ark-color-surface-muted);
+}

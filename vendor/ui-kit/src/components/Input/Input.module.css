@@ -1,0 +1,68 @@
+/*
+ * Figma "Design System" -> Input Field
+ *   Input: 40px yukseklik, fill #FFFFFF, stroke #D9D9D9 1px, r=5, pad 16/12
+ *   Value (placeholder): #B3B3B3
+ */
+.control {
+  width: 100%;
+  border: 1px solid var(--ark-color-border-strong);
+  border-radius: var(--ark-radius-md);
+  background-color: var(--ark-color-surface);
+  color: var(--ark-color-text);
+  font-family: var(--ark-font-sans);
+  font-weight: var(--ark-font-weight-regular);
+  line-height: 1;
+  transition:
+    border-color var(--ark-transition-fast),
+    box-shadow var(--ark-transition-fast);
+}
+
+.control::placeholder {
+  color: #b3b3b3;
+}
+
+.control:focus {
+  outline: none;
+  border-color: var(--ark-color-text-subtle);
+  box-shadow: 0 0 0 var(--ark-ring-width) var(--ark-color-primary-soft);
+}
+
+.control:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 1px;
+}
+
+.control:disabled {
+  background-color: var(--ark-color-disabled-bg);
+  border-color: var(--ark-color-disabled-bg);
+  color: var(--ark-color-disabled-text);
+  cursor: not-allowed;
+}
+
+.invalid,
+.invalid:focus {
+  border-color: var(--ark-color-danger);
+}
+
+.invalid:focus {
+  box-shadow: 0 0 0 var(--ark-ring-width) var(--ark-color-danger-soft);
+}
+
+/* --------------------------------------------------------------- boyutlar */
+.sm {
+  height: 32px;
+  padding: 0 var(--ark-space-3);
+  font-size: var(--ark-font-size-sm);
+}
+
+.md {
+  height: 40px;
+  padding: 0 var(--ark-space-4);
+  font-size: var(--ark-font-size-md);
+}
+
+.lg {
+  height: 48px;
+  padding: 0 var(--ark-space-4);
+  font-size: var(--ark-font-size-lg);
+}

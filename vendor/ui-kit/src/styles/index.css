@@ -1,0 +1,11 @@
+/*
+ * @ark/ui-kit — paket stilleri (tek giris noktasi)
+ * ---------------------------------------------------------------------------
+ * Uygulama bu dosyayi import eder:
+ *   import '@ark/ui-kit/styles.css';
+ *
+ * Font tanimlari once gelir; tokenlar onlarin uzerine biner.
+ */
+@import './fonts.css';
+@import './tokens.css';
+@import './workspace-tokens.css';

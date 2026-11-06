@@ -1,0 +1,754 @@
+/*
+ * Spreadsheet — Excel benzeri tablo
+ * ---------------------------------------------------------------------------
+ * Butun renk, bosluk, yaricap ve tipografi degerleri @ark/ui-kit token'larindan
+ * gelir; bilesen kendi paletini tanimlamaz. Boylece tema degisimi (acik/koyu)
+ * tek noktadan yonetilir.
+ *
+ * Grid duzeni:
+ *   - sol serit (satir numaralari) `position: sticky` ile sabitlenir
+ *   - ust serit (sutun harfleri + baslik satiri) `position: sticky` ile sabitlenir
+ *   - tablo `table-layout: fixed` kullanir; sutun genislikleri px olarak verilir
+ */
+
+.root {
+  --sheet-gutter-width: 44px;
+  --sheet-letters-height: 26px;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--ark-color-border);
+  border-radius: var(--ark-radius-lg);
+  background-color: var(--ark-color-bg);
+  color: var(--ark-color-text);
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-sm);
+}
+
+/* --------------------------------------------------------------- ust blok */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ark-space-4);
+  padding: var(--ark-space-3) var(--ark-space-4);
+  background-color: var(--ark-color-surface);
+  border-bottom: 1px solid var(--ark-color-border);
+}
+
+.footer {
+  padding: var(--ark-space-3) var(--ark-space-4);
+  background-color: var(--ark-color-surface);
+  border-top: 1px solid var(--ark-color-border);
+}
+
+/* ------------------------------------------------------------ arac cubugu */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ark-space-3);
+  padding: var(--ark-space-2) var(--ark-space-3);
+  background-color: var(--ark-color-surface);
+  border-bottom: 1px solid var(--ark-color-border);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ark-space-1);
+}
+
+.extraToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-2);
+  margin-inline-start: var(--ark-space-2);
+}
+
+.separator {
+  width: 1px;
+  height: 20px;
+  margin-inline: var(--ark-space-1);
+  background-color: var(--ark-color-border);
+}
+
+.boldGlyph {
+  font-size: var(--ark-font-size-sm);
+  font-weight: var(--ark-font-weight-bold);
+  line-height: 1;
+}
+
+.pressed {
+  background-color: var(--ark-color-primary-soft);
+  border-color: var(--ark-color-primary);
+  color: var(--ark-color-primary);
+}
+
+/* ---------------------------------------------------------- formul cubugu */
+
+.formulaBar {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-2);
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.refField,
+.formulaField {
+  display: flex;
+  min-width: 0;
+}
+
+.refField {
+  flex: 0 0 auto;
+}
+
+.formulaField {
+  flex: 1 1 auto;
+}
+
+.refInput,
+.formulaInput {
+  border: 1px solid var(--ark-color-border-strong);
+  border-radius: var(--ark-radius-md);
+  background-color: var(--ark-color-surface);
+  color: var(--ark-color-text);
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition:
+    border-color var(--ark-transition-fast),
+    box-shadow var(--ark-transition-fast);
+}
+
+.refInput {
+  width: 92px;
+  height: 32px;
+  padding: 0 var(--ark-space-2);
+}
+
+.formulaInput {
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--ark-space-3);
+}
+
+.refInput:focus,
+.formulaInput:focus {
+  outline: none;
+  border-color: var(--ark-color-text-subtle);
+  box-shadow: 0 0 0 var(--ark-ring-width) var(--ark-color-primary-soft);
+}
+
+.refInput:focus-visible,
+.formulaInput:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 1px;
+}
+
+.formulaInput:disabled {
+  background-color: var(--ark-color-disabled-bg);
+  border-color: var(--ark-color-disabled-bg);
+  color: var(--ark-color-disabled-text);
+  cursor: not-allowed;
+}
+
+.fxMark {
+  font-style: italic;
+  font-weight: var(--ark-font-weight-semibold);
+  color: var(--ark-color-text-muted);
+}
+
+/* -------------------------------------------------------------- calisma alani */
+
+.workspace {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.panel[data-active='false'] {
+  display: none;
+}
+
+.printHead {
+  display: none;
+}
+
+.gridScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* Tablo genisligi sutun genisliklerinin toplamindan kucuk olamaz; bu sayede
+   yatay kaydirma dogru calisir. */
+.gridInner {
+  min-width: 100%;
+  padding-bottom: var(--ark-space-6);
+}
+
+.table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  background-color: var(--ark-color-surface);
+  font-size: var(--ark-font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.gutterCol {
+  width: var(--sheet-gutter-width);
+}
+
+/* ------------------------------------------------------- sutun harfleri seridi */
+
+.lettersRow th {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: var(--sheet-letters-height);
+  padding: 0 var(--ark-space-2);
+  background-color: var(--ark-color-bg);
+  border-bottom: 1px solid var(--ark-color-border);
+  border-right: 1px solid var(--ark-color-border);
+  color: var(--ark-color-text);
+  font-size: var(--ark-font-size-xs);
+  font-weight: var(--ark-font-weight-semibold);
+  line-height: var(--sheet-letters-height);
+  text-align: center;
+  user-select: none;
+}
+
+.letter {
+  position: relative;
+}
+
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 9px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resizeHandle:hover {
+  background-color: var(--ark-color-primary-soft);
+}
+
+/* --------------------------------------------------------- baslik satiri */
+
+.titleRow th {
+  position: sticky;
+  top: var(--sheet-letters-height);
+  z-index: 3;
+  padding: var(--ark-space-2) var(--ark-space-3);
+  background-color: var(--ark-color-control-bg);
+  border-bottom: 1px solid var(--ark-color-control-bg);
+  border-right: 1px solid color-mix(in srgb, var(--ark-color-control-text) 20%, transparent);
+  color: var(--ark-color-control-text);
+  font-size: var(--ark-font-size-xs);
+  font-weight: var(--ark-font-weight-semibold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+/* ------------------------------------------------- sol serit (satir numarasi) */
+
+.rowHead {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: var(--sheet-gutter-width);
+  padding: 0 var(--ark-space-2);
+  background-color: var(--ark-color-bg);
+  border-right: 1px solid var(--ark-color-border);
+  border-bottom: 1px solid var(--ark-color-border);
+  color: var(--ark-color-text-muted);
+  font-size: var(--ark-font-size-xs);
+  font-weight: var(--ark-font-weight-semibold);
+  text-align: center;
+  user-select: none;
+}
+
+.corner {
+  z-index: 6;
+}
+
+/* Bolum ac/kapa: sol seritte [ok][satir no] */
+.rowHeadInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ark-space-1);
+}
+
+.toggleSlot {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+}
+
+.groupToggle {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ark-radius-sm, 4px);
+  background: transparent;
+  color: var(--ark-color-text);
+  cursor: pointer;
+}
+
+.groupToggle:hover {
+  background-color: var(--ark-color-control-bg-hover, rgb(0 0 0 / 8%));
+}
+
+.groupToggle:focus-visible {
+  outline: 2px solid var(--ark-color-primary);
+  outline-offset: 1px;
+}
+
+.groupToggle svg {
+  transition: transform 120ms ease;
+}
+
+.groupToggle[data-collapsed='true'] svg {
+  transform: rotate(-90deg);
+}
+
+.titleRow .rowHead {
+  z-index: 6;
+  background-color: var(--ark-color-control-bg);
+  border-bottom-color: var(--ark-color-control-bg);
+  border-right-color: color-mix(in srgb, var(--ark-color-control-text) 20%, transparent);
+  color: var(--ark-color-control-text);
+}
+
+/* ------------------------------------------------------------------ hucreler */
+
+.cell {
+  position: relative;
+  padding: var(--ark-space-2) var(--ark-space-3);
+  border-bottom: 1px solid var(--ark-color-border);
+  border-right: 1px solid var(--ark-color-border);
+  background-color: var(--ark-color-surface);
+  color: var(--ark-color-text);
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+
+.cellText {
+  display: block;
+}
+
+.cell:hover {
+  background-color: var(--ark-color-surface-muted);
+}
+
+.inRange {
+  background-color: color-mix(in srgb, var(--ark-color-primary) 8%, var(--ark-color-surface));
+}
+
+.activeCell {
+  background-color: var(--ark-color-primary-soft);
+  outline: 2px solid var(--ark-color-primary);
+  outline-offset: -2px;
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--ark-color-primary);
+  outline-offset: -2px;
+}
+
+.formulaCell {
+  color: var(--ark-color-text);
+}
+
+/* Hucre isaretleri (dogrulama vb.): renkli ic cerceve + sag ust kose uclgeni. */
+.cell[data-mark='error'] {
+  --mark-color: var(--ark-color-danger);
+}
+
+.cell[data-mark='warning'] {
+  --mark-color: var(--ark-color-warning);
+}
+
+.cell[data-mark] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mark-color) 55%, transparent);
+}
+
+.cell[data-mark]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-style: solid;
+  border-width: 0 9px 9px 0;
+  border-color: transparent var(--mark-color) transparent transparent;
+  pointer-events: none;
+}
+
+/* Koyu bantlardaki secim kendi kontrastini korur. */
+.titleRow th.inRange,
+.totalRow td.inRange {
+  background-color: color-mix(
+    in srgb,
+    var(--ark-color-primary) 35%,
+    var(--ark-color-control-bg)
+  );
+  color: var(--ark-color-control-text);
+}
+
+.titleRow th.activeCell,
+.totalRow td.activeCell {
+  background-color: color-mix(
+    in srgb,
+    var(--ark-color-primary) 55%,
+    var(--ark-color-control-bg)
+  );
+  color: var(--ark-color-control-text);
+}
+
+/* ------------------------------------------------------------------ satirler */
+
+.groupRow td {
+  background-color: var(--ark-color-bg);
+  border-top: 1px solid var(--ark-color-border);
+  border-bottom: 1px solid var(--ark-color-border);
+  font-weight: var(--ark-font-weight-semibold);
+}
+
+.totalRow td {
+  background-color: var(--ark-color-control-bg);
+  border-top: 1px solid var(--ark-color-control-bg);
+  border-bottom: 1px solid var(--ark-color-control-bg);
+  color: var(--ark-color-control-text);
+  font-weight: var(--ark-font-weight-bold);
+}
+
+.itemRow td {
+  font-weight: var(--ark-font-weight-regular);
+}
+
+/* Aciklama / yorum satiri: onceki satirin devami gibi, soluk ve italik. */
+.noteRow td {
+  color: var(--ark-color-text-muted);
+  font-style: italic;
+  font-weight: var(--ark-font-weight-regular);
+}
+
+.emptyCell {
+  padding: var(--ark-space-8) var(--ark-space-4);
+  color: var(--ark-color-text-muted);
+  text-align: center;
+}
+
+.contentCell {
+  padding: var(--ark-space-3) var(--ark-space-3) var(--ark-space-5);
+  background-color: var(--ark-color-surface);
+}
+
+/* -------------------------------------------------------------- hucre duzenleyici */
+
+.cellEditor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: max(100%, 140px);
+  height: 100%;
+  min-height: 28px;
+  padding: 0 var(--ark-space-2);
+  border: 2px solid var(--ark-color-primary);
+  border-radius: var(--ark-radius-sm);
+  background-color: var(--ark-color-surface);
+  color: var(--ark-color-text);
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-sm);
+}
+
+.cellEditor:focus {
+  outline: none;
+}
+
+/* ------------------------------------------------------------- alt cubuk */
+
+.footerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ark-space-4);
+  min-height: 40px;
+  padding: 0 var(--ark-space-4);
+  background-color: var(--ark-color-surface);
+  border-top: 1px solid var(--ark-color-border);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--ark-space-1);
+}
+
+.tab {
+  padding: var(--ark-space-2) var(--ark-space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background-color: transparent;
+  color: var(--ark-color-text-muted);
+  font-family: inherit;
+  font-size: var(--ark-font-size-sm);
+  cursor: pointer;
+  transition:
+    color var(--ark-transition-fast),
+    border-color var(--ark-transition-fast);
+}
+
+.tab:hover {
+  color: var(--ark-color-text);
+}
+
+.tabActive {
+  border-bottom-color: var(--ark-color-primary);
+  color: var(--ark-color-text);
+  font-weight: var(--ark-font-weight-semibold);
+}
+
+.tab:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: -2px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-4);
+  color: var(--ark-color-text-muted);
+  font-size: var(--ark-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ menu */
+
+.menu {
+  position: fixed;
+  z-index: var(--ark-z-dropdown);
+  min-width: 176px;
+  padding: var(--ark-space-1);
+  border: 1px solid var(--ark-color-border);
+  border-radius: var(--ark-radius-lg);
+  background-color: var(--ark-color-surface);
+  box-shadow: var(--ark-shadow-md);
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  padding: var(--ark-space-2) var(--ark-space-3);
+  border: 0;
+  border-radius: var(--ark-radius-sm);
+  background-color: transparent;
+  color: var(--ark-color-text);
+  font-family: inherit;
+  font-size: var(--ark-font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background-color: var(--ark-color-surface-muted);
+}
+
+.menuItem:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: -2px;
+}
+
+.modalBody {
+  margin: 0;
+  color: var(--ark-color-text-muted);
+  line-height: var(--ark-line-height-relaxed);
+}
+
+/* ------------------------------------------------------------------ hizalama */
+
+.left {
+  text-align: left;
+}
+
+.center {
+  text-align: center;
+}
+
+.right {
+  text-align: right;
+}
+
+/* ------------------------------------------------------------------- yazdirma */
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+
+  .root {
+    height: auto;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background-color: var(--ark-color-surface);
+  }
+
+  .header,
+  .toolbar,
+  .footerBar,
+  .footer,
+  .menu {
+    display: none !important;
+  }
+
+  .workspace {
+    position: static;
+  }
+
+  .panel,
+  .panel[data-active='false'] {
+    position: static;
+    display: block !important;
+    page-break-after: always;
+  }
+
+  .printHead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--ark-space-4);
+    padding-bottom: var(--ark-space-2);
+    margin-bottom: var(--ark-space-3);
+    border-bottom: 1px solid var(--ark-color-text);
+  }
+
+  .printTitle {
+    margin: 0;
+    font-size: 14pt;
+    font-weight: var(--ark-font-weight-semibold);
+  }
+
+  .printMeta {
+    margin: 0;
+    color: var(--ark-color-text-muted);
+    font-size: 10pt;
+  }
+
+  .gridScroll {
+    overflow: visible;
+  }
+
+  .gridInner {
+    min-width: 0;
+    padding-bottom: 0;
+  }
+
+  .table {
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 11pt;
+  }
+
+  .gutterCol {
+    width: 0 !important;
+  }
+
+  .rowHead,
+  .corner {
+    visibility: hidden;
+  }
+
+  .lettersRow {
+    display: none !important;
+  }
+
+  .titleRow th {
+    position: static;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  .titleRow th,
+  .totalRow td {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+/* Basligin altindaki kisa formul / aciklama (SpreadsheetColumn.formulaHint) */
+.titleHint {
+  display: block;
+  margin-top: 2px;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+/* Baglam menusu: ayirici ve yikici oge */
+.menuSeparator {
+  height: 1px;
+  margin: var(--ark-space-1) 0;
+  border: 0;
+  background-color: var(--ark-color-border);
+}
+
+.menuItemDanger {
+  color: var(--ark-color-danger, #b91c1c);
+}
+
+.menuItem:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.menuItem:disabled:hover {
+  background-color: transparent;
+}

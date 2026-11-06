@@ -1,0 +1,63 @@
+.breadcrumbs {
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-md);
+  line-height: 20px;
+  color: var(--ark-color-text);
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem {
+  display: inline-flex;
+  align-items: center;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  color: var(--ark-color-text-subtle);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  white-space: nowrap;
+}
+
+.anchor:hover {
+  color: #2c2c2c;
+}
+
+.anchor:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 2px;
+  border-radius: var(--ark-radius-xs);
+}
+
+.current {
+  color: #2c2c2c;
+  text-decoration-color: var(--ark-color-primary);
+}
+
+.disabled {
+  color: var(--ark-color-text-muted);
+}
+
+.separator {
+  /* Figma'da ayirici 12x20 bir cerceve icinde 10px dolguyla durur. */
+  margin-inline: 5px;
+  color: var(--ark-color-text-subtle);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 20px;
+  user-select: none;
+}

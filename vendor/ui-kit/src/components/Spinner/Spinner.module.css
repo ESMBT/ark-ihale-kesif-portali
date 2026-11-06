@@ -1,0 +1,66 @@
+/*
+ * Figma "Design System" -> spinner component set
+ *   40x40, track #DFE1E2, yay currentColor, stroke 1px
+ */
+.spinner {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  color: currentcolor;
+}
+
+.circle {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: ark-spin 700ms linear infinite;
+}
+
+.track {
+  stroke: var(--ark-color-disabled-bg);
+}
+
+.arc {
+  opacity: 0.9;
+}
+
+.sm {
+  width: 16px;
+  height: 16px;
+}
+
+.md {
+  width: 24px;
+  height: 24px;
+}
+
+.lg {
+  width: 40px;
+  height: 40px;
+}
+
+.label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes ark-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .circle {
+    animation-duration: 2.4s;
+  }
+}

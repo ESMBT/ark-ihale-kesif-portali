@@ -1,0 +1,42 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-5);
+  min-height: 32px;
+  padding: var(--ark-space-1) var(--ark-space-3);
+  color: var(--ark-color-text-muted);
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-xs);
+}
+
+.item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--ark-space-1);
+  white-space: nowrap;
+}
+
+.label {
+  color: var(--ark-color-text-muted);
+}
+
+.value {
+  color: var(--ark-color-text);
+  font-weight: var(--ark-font-weight-semibold);
+}
+
+.value[data-tone='success'] {
+  color: var(--ark-color-success);
+}
+
+.value[data-tone='warning'] {
+  color: var(--ark-color-warning-deep);
+}
+
+.value[data-tone='danger'] {
+  color: var(--ark-color-danger);
+}
+
+.spacer {
+  flex: 1;
+}

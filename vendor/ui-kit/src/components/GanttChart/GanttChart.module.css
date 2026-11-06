@@ -1,0 +1,241 @@
+.chart {
+  --gantt-left: 460px;
+
+  min-width: 0;
+  border: 1px solid var(--ark-color-border);
+  border-radius: var(--ark-radius-lg);
+  background-color: var(--ark-color-surface);
+  color: var(--ark-color-text);
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-xs);
+  overflow: hidden;
+}
+
+.scroller {
+  overflow: auto;
+  max-height: inherit;
+}
+
+.canvas {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+}
+
+/* ---------------------------------------------------------------- sol tablo */
+.left {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  flex: none;
+  width: var(--gantt-left);
+  border-right: 1px solid var(--ark-color-border-strong);
+  background-color: var(--ark-color-surface);
+}
+
+.leftHead,
+.leftRow {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 70px 70px 40px;
+  align-items: center;
+  gap: var(--ark-space-2);
+  padding: 0 var(--ark-space-2);
+}
+
+.leftHead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: var(--gantt-head);
+  border-bottom: 1px solid var(--ark-color-border-strong);
+  background-color: var(--ark-color-surface-muted);
+  color: var(--ark-color-text-muted);
+  font-weight: var(--ark-font-weight-semibold);
+  letter-spacing: 0.02em;
+}
+
+.leftRow {
+  height: var(--gantt-row);
+  border-bottom: 1px solid var(--ark-color-border);
+  font-size: var(--ark-font-size-sm);
+  outline: none;
+}
+
+.leftRow[role='button'] {
+  cursor: pointer;
+}
+
+.leftRow:hover {
+  background-color: var(--ark-color-row-hover);
+}
+
+.leftRow:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--ark-color-primary);
+}
+
+.leftRow[data-summary] {
+  background-color: var(--ark-color-row-highlight);
+  font-weight: var(--ark-font-weight-bold);
+}
+
+.leftRow[data-selected] {
+  background-color: var(--ark-color-row-selected);
+}
+
+.code {
+  color: var(--ark-color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.leftRow[data-summary] .code {
+  color: var(--ark-color-level-1);
+}
+
+.activity {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* -------------------------------------------------------- zaman cizelgesi */
+.right {
+  position: relative;
+  flex: none;
+}
+
+.rightHead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: var(--gantt-head);
+  border-bottom: 1px solid var(--ark-color-border-strong);
+  background-color: var(--ark-color-surface-muted);
+}
+
+.months,
+.days {
+  display: flex;
+  height: 28px;
+}
+
+.month {
+  flex: none;
+  overflow: hidden;
+  border-right: 1px solid var(--ark-color-border-strong);
+  border-bottom: 1px solid var(--ark-color-border);
+  font-weight: var(--ark-font-weight-bold);
+  line-height: 27px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.day {
+  flex: none;
+  border-right: 1px solid var(--ark-color-border);
+  color: var(--ark-color-text-muted);
+  font-size: 10px;
+  line-height: 27px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.weekendHead {
+  background-color: var(--ark-color-danger-soft);
+}
+
+.plot {
+  position: relative;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--gantt-row) - 1px),
+    var(--ark-color-border) calc(var(--gantt-row) - 1px),
+    var(--ark-color-border) var(--gantt-row)
+  );
+}
+
+.weekend {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background-color: var(--ark-color-danger-soft);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.track {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: var(--gantt-row);
+}
+
+.track[data-selected] {
+  background-color: var(--ark-color-row-selected);
+  opacity: 0.9;
+}
+
+.bar {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  overflow: hidden;
+  border-radius: var(--ark-radius-sm);
+  background-color: var(--ark-color-primary);
+  box-shadow: var(--ark-shadow-sm);
+}
+
+.bar[data-tone='success'] {
+  background-color: var(--ark-color-success);
+}
+
+.bar[data-tone='warning'] {
+  background-color: var(--ark-color-warning);
+}
+
+.bar[data-tone='danger'] {
+  background-color: var(--ark-color-danger);
+}
+
+.progress {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background-color: rgb(0 0 0 / 0.28);
+}
+
+.bar[data-summary] {
+  top: 11px;
+  bottom: auto;
+  height: 10px;
+  border-radius: 1px;
+  background-color: var(--ark-color-text);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, calc(100% - 6px) 55%, 6px 55%, 0 100%);
+  box-shadow: none;
+}
+
+.barLabel {
+  position: absolute;
+  top: 0;
+  color: var(--ark-color-text-muted);
+  font-size: var(--ark-font-size-xs);
+  font-weight: var(--ark-font-weight-semibold);
+  line-height: var(--gantt-row);
+  white-space: nowrap;
+}
+
+.today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background-color: var(--ark-color-danger);
+  pointer-events: none;
+}

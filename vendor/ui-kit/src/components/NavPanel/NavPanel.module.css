@@ -1,0 +1,101 @@
+.panel {
+  display: grid;
+  min-height: 360px;
+  overflow: hidden;
+  border: 1px solid var(--ark-color-border);
+  border-radius: var(--ark-radius-lg);
+  background-color: var(--ark-color-surface);
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-sm);
+}
+
+.nav {
+  padding: var(--ark-space-3);
+  overflow-y: auto;
+  border-right: 1px solid var(--ark-color-border);
+  background-color: var(--ark-color-surface-muted);
+}
+
+.group + .group {
+  margin-top: var(--ark-space-4);
+}
+
+.groupTitle {
+  margin: 0 0 var(--ark-space-1);
+  padding: 0 var(--ark-space-2);
+  color: var(--ark-color-text-subtle);
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-xs);
+  font-weight: var(--ark-font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-2);
+  width: 100%;
+  padding: 6px var(--ark-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--ark-radius-md);
+  background: transparent;
+  color: var(--ark-color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--ark-transition-fast),
+    border-color var(--ark-transition-fast);
+}
+
+.item:hover:not(:disabled):not(.active) {
+  background-color: var(--ark-color-border);
+}
+
+.item:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 1px;
+}
+
+.item:disabled {
+  color: var(--ark-color-disabled-text);
+  cursor: not-allowed;
+}
+
+.active {
+  border-color: var(--ark-color-primary-border);
+  background-color: var(--ark-color-primary-soft);
+  color: var(--ark-color-primary-active);
+  font-weight: var(--ark-font-weight-semibold);
+}
+
+.number {
+  flex: none;
+  min-width: 22px;
+  color: var(--ark-color-text-subtle);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.active .number {
+  color: inherit;
+}
+
+.itemLabel {
+  min-width: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: auto;
+  padding: var(--ark-space-5);
+}

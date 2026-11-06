@@ -1,0 +1,77 @@
+.pagination {
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-md);
+  line-height: 20px;
+  color: var(--ark-color-text);
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  gap: var(--ark-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: inline-flex;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ark-radius-sm);
+  background-color: transparent;
+  color: var(--ark-color-text);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--ark-transition-fast),
+    border-color var(--ark-transition-fast),
+    color var(--ark-transition-fast);
+}
+
+.button:hover:not(:disabled) {
+  background-color: var(--ark-color-surface);
+  border-color: var(--ark-color-border);
+}
+
+.button:focus-visible {
+  background-color: var(--ark-color-surface);
+  border-color: var(--ark-color-border);
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 2px;
+  box-shadow: 0 1px 1.7px rgba(0, 0, 0, 0.25);
+}
+
+.button:disabled {
+  color: var(--ark-color-disabled-text);
+  cursor: not-allowed;
+}
+
+.current,
+.current:hover:not(:disabled),
+.current:focus-visible {
+  background-color: #2c2c2c;
+  color: #ffffff;
+  border-color: #2c2c2c;
+  border-radius: var(--ark-radius-md);
+}
+
+.ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #000000;
+  user-select: none;
+}

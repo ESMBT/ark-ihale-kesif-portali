@@ -1,0 +1,75 @@
+.wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--ark-color-border);
+  border-radius: var(--ark-radius-lg);
+  background-color: var(--ark-color-surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ark-font-size-sm);
+  color: var(--ark-color-text);
+}
+
+.caption {
+  padding: var(--ark-space-3) var(--ark-space-4);
+  color: var(--ark-color-text-muted);
+  font-size: var(--ark-font-size-xs);
+  text-align: left;
+  caption-side: top;
+}
+
+.head {
+  background-color: var(--ark-color-surface-muted);
+}
+
+.headCell {
+  padding: var(--ark-space-3) var(--ark-space-4);
+  border-bottom: 1px solid var(--ark-color-border);
+  color: var(--ark-color-text-muted);
+  font-size: var(--ark-font-size-xs);
+  font-weight: var(--ark-font-weight-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cell {
+  padding: var(--ark-space-3) var(--ark-space-4);
+  border-bottom: 1px solid var(--ark-color-border);
+  vertical-align: middle;
+}
+
+.row:last-child .cell {
+  border-bottom: 0;
+}
+
+.row:hover .cell {
+  background-color: var(--ark-color-surface-muted);
+}
+
+.state {
+  padding: var(--ark-space-8) var(--ark-space-4);
+  color: var(--ark-color-text-muted);
+  text-align: center;
+}
+
+.stateCell {
+  padding: var(--ark-space-8) var(--ark-space-4);
+  color: var(--ark-color-text-muted);
+  text-align: center;
+}
+
+.left {
+  text-align: left;
+}
+
+.center {
+  text-align: center;
+}
+
+.right {
+  text-align: right;
+}

@@ -1,0 +1,322 @@
+/*
+ * @ark/ui-kit — design tokens
+ * ---------------------------------------------------------------------------
+ * Tek kaynak: butun renk, bosluk, yaricap, tipografi, efekt ve z-index
+ * degerleri bu dosyada tanimlanir. Bilesenler yalnizca bu custom property'leri
+ * kullanir; boylece tema degisimi tek noktadan yonetilir.
+ *
+ * KAYNAK: Figma "Design System" (file key: kmsebzYktpGg2phjeHeTno)
+ * - Renkler   : 'Renkler' cercevesi (33 swatch)
+ * - Tipografi : 'Tipografi' cercevesi (Space Grotesk + Helvetica)
+ * - Gölgeler  : 'shadows' cercevesi (4 seviye + buton durumlari)
+ * - Yaricap   : bilesen olculerinden turetildi
+ *
+ * NOT: Koyu tema Figma'da tanimli degildir; asagida marka paletinden
+ * turetilmistir ve elle korunmaktadir.
+ */
+
+/* ------------------------------------------------------------------ light */
+:root {
+  color-scheme: light;
+
+  /* --- Marka: Primary (Figma Primary/M_Blue #0671E0, Primary/Sky #DBEDFF) --- */
+  --ark-color-primary: #0671e0;
+  --ark-color-primary-hover: #0560bc;
+  --ark-color-primary-active: #044a94;
+  --ark-color-primary-contrast: #ffffff;
+  --ark-color-primary-soft: #dbedff;
+  --ark-color-primary-soft-strong: #cbdeff;
+  --ark-color-primary-border: #abbed1;
+
+  /* --- Basari (Figma Success/*) --- */
+  --ark-color-success: #009262;
+  --ark-color-success-hover: #007a51;
+  --ark-color-success-active: #005f3f;
+  --ark-color-success-contrast: #ffffff;
+  --ark-color-success-soft: #f1fbf8;
+  --ark-color-success-border: #c7eadf;
+  --ark-color-success-deep: #115b43;
+
+  /* --- Uyari (Figma Warning/*) --- */
+  --ark-color-warning: #e48900;
+  --ark-color-warning-hover: #c67700;
+  --ark-color-warning-active: #a56400;
+  --ark-color-warning-contrast: #ffffff;
+  --ark-color-warning-soft: #fff8ec;
+  --ark-color-warning-border: #f3dcb7;
+  --ark-color-warning-deep: #875000;
+
+  /* --- Tehlike (Figma Danger/*) --- */
+  --ark-color-danger: #c33025;
+  --ark-color-danger-hover: #ab0202;
+  --ark-color-danger-active: #8b0202;
+  --ark-color-danger-contrast: #ffffff;
+  --ark-color-danger-soft: #fff1f0;
+  --ark-color-danger-border: #f5c6c2;
+
+  /* --- Bilgi --- */
+  --ark-color-info: #0671e0;
+  --ark-color-info-hover: #0560bc;
+  --ark-color-info-soft: #eef5fc;
+  --ark-color-info-border: #cbdeff;
+
+  /* --- Notr (Figma Neutral/*) --- */
+  --ark-color-bg: #f6f7f7;
+  --ark-color-surface: #ffffff;
+  --ark-color-surface-muted: #f5f5f5;
+  --ark-color-border: #dfe1e2;
+  --ark-color-border-strong: #d9d9d9;
+  --ark-color-text: #212121;
+  --ark-color-text-muted: #767676;
+  --ark-color-text-subtle: #89939e;
+  --ark-color-text-inverted: #ffffff;
+  --ark-color-disabled-bg: #dfe1e2;
+  --ark-color-disabled-text: #999999;
+
+  /* --- Kontrol (Figma Button "Primary" varyanti) ---
+     Koyu temada siyah dolgu okunabilirligini kaybeder; bu yuzden tokenlastirilir. */
+  --ark-color-control-bg: #000000;
+  --ark-color-control-border: #2c2c2c;
+  --ark-color-control-text: #f5f5f5;
+  --ark-color-control-hover-bg: #333333;
+  --ark-color-control-subtle-text: #303030;
+
+  /* Bosluk olcegi (Figma 4/8/12/16/20/24/32/40/48) */
+  --ark-space-0: 0;
+  --ark-space-1: 4px;
+  --ark-space-2: 8px;
+  --ark-space-3: 12px;
+  --ark-space-4: 16px;
+  --ark-space-5: 20px;
+  --ark-space-6: 24px;
+  --ark-space-8: 32px;
+  --ark-space-10: 40px;
+  --ark-space-12: 48px;
+
+  /* Yaricap (Figma: tab focus 2, pagination 4, button/input 5, subtle button 8, swatch 10) */
+  --ark-radius-xs: 2px;
+  --ark-radius-sm: 4px;
+  --ark-radius-md: 5px;
+  --ark-radius-lg: 8px;
+  --ark-radius-xl: 10px;
+  --ark-radius-full: 999px;
+
+  /* Tipografi (Figma: Space Grotesk baslik, Helvetica govde) */
+  --ark-font-sans: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  --ark-font-display: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --ark-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono',
+    monospace;
+  --ark-font-size-xs: 11px;
+  --ark-font-size-sm: 14px;
+  --ark-font-size-md: 16px;
+  --ark-font-size-lg: 18px;
+  --ark-font-size-xl: 20px;
+  --ark-font-size-2xl: 28px;
+  --ark-font-size-3xl: 36px;
+  --ark-font-size-4xl: 64px;
+  --ark-line-height-tight: 1.25;
+  --ark-line-height-normal: 1.4;
+  --ark-line-height-relaxed: 1.55;
+  --ark-font-weight-regular: 400;
+  --ark-font-weight-medium: 500;
+  --ark-font-weight-semibold: 600;
+  --ark-font-weight-bold: 700;
+
+  /* Efektler (Figma 'shadows': #ABBED1 tabanli 4 seviye) */
+  --ark-shadow-sm: 0 2px 4px rgb(171 190 209 / 0.6);
+  --ark-shadow-md: 0 4px 8px rgb(171 190 209 / 0.4);
+  --ark-shadow-lg: 0 6px 12px rgb(171 190 209 / 0.3);
+  --ark-shadow-xl: 0 8px 16px rgb(171 190 209 / 0.4);
+  --ark-shadow-control: 0 2px 3px rgb(0 0 0 / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.18);
+  --ark-shadow-control-hover: 0 4px 8px rgb(0 0 0 / 0.18);
+  --ark-shadow-control-pressed: inset 0 2px 3px rgb(0 0 0 / 0.35);
+  --ark-ring-color: #717171;
+  --ark-ring-width: 1px;
+  --ark-transition-fast: 120ms ease;
+  --ark-transition-base: 180ms ease;
+
+  /* Katman sirasi */
+  --ark-z-dropdown: 1000;
+  --ark-z-sticky: 1100;
+  --ark-z-modal: 1200;
+  --ark-z-toast: 1300;
+}
+
+/* ------------------------------------------------------------------ dark
+ * Figma'da koyu tema tanimli degildir; marka paletinden turetilmistir.
+ */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ark-color-primary: #4e9bff;
+  --ark-color-primary-hover: #78b1ff;
+  --ark-color-primary-active: #2f7fe0;
+  --ark-color-primary-contrast: #06121f;
+  --ark-color-primary-soft: #10294a;
+  --ark-color-primary-soft-strong: #17375f;
+  --ark-color-primary-border: #2c4a70;
+
+  --ark-color-success: #32c997;
+  --ark-color-success-hover: #5ad6aa;
+  --ark-color-success-active: #22a87b;
+  --ark-color-success-contrast: #06170f;
+  --ark-color-success-soft: #0f2e25;
+  --ark-color-success-border: #1d4a3c;
+  --ark-color-success-deep: #84dfc1;
+
+  --ark-color-warning: #ffa826;
+  --ark-color-warning-hover: #ffbb54;
+  --ark-color-warning-active: #d98a0a;
+  --ark-color-warning-contrast: #1c1203;
+  --ark-color-warning-soft: #33270f;
+  --ark-color-warning-border: #55401a;
+  --ark-color-warning-deep: #ffcb2e;
+
+  --ark-color-danger: #ff5a4f;
+  --ark-color-danger-hover: #ff8078;
+  --ark-color-danger-active: #e02b1d;
+  --ark-color-danger-contrast: #1c0605;
+  --ark-color-danger-soft: #3a1b19;
+  --ark-color-danger-border: #5c2a26;
+
+  --ark-color-info: #4e9bff;
+  --ark-color-info-hover: #78b1ff;
+  --ark-color-info-soft: #10294a;
+  --ark-color-info-border: #2c4a70;
+
+  --ark-color-bg: #16181c;
+  --ark-color-surface: #1f2226;
+  --ark-color-surface-muted: #2a2e33;
+  --ark-color-border: #383d44;
+  --ark-color-border-strong: #4a5057;
+  --ark-color-text: #f6f7f7;
+  --ark-color-text-muted: #a8b0b8;
+  --ark-color-text-subtle: #89939e;
+  --ark-color-text-inverted: #16181c;
+  --ark-color-disabled-bg: #2a2e33;
+  --ark-color-disabled-text: #6b737b;
+
+  --ark-color-control-bg: #2a2e33;
+  --ark-color-control-border: #4a5057;
+  --ark-color-control-text: #f6f7f7;
+  --ark-color-control-hover-bg: #383d44;
+  --ark-color-control-subtle-text: #f6f7f7;
+
+  --ark-shadow-sm: 0 2px 4px rgb(0 0 0 / 0.4);
+  --ark-shadow-md: 0 4px 8px rgb(0 0 0 / 0.45);
+  --ark-shadow-lg: 0 6px 12px rgb(0 0 0 / 0.5);
+  --ark-shadow-xl: 0 8px 16px rgb(0 0 0 / 0.55);
+  --ark-shadow-control: 0 2px 3px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.1);
+  --ark-shadow-control-hover: 0 4px 8px rgb(0 0 0 / 0.45);
+  --ark-shadow-control-pressed: inset 0 2px 3px rgb(0 0 0 / 0.6);
+}
+
+/* Sistem temasini tercih edenler icin (data-theme tanimli degilse) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --ark-color-primary: #4e9bff;
+    --ark-color-primary-hover: #78b1ff;
+    --ark-color-primary-active: #2f7fe0;
+    --ark-color-primary-contrast: #06121f;
+    --ark-color-primary-soft: #10294a;
+    --ark-color-primary-soft-strong: #17375f;
+    --ark-color-primary-border: #2c4a70;
+
+    --ark-color-success: #32c997;
+    --ark-color-success-hover: #5ad6aa;
+    --ark-color-success-active: #22a87b;
+    --ark-color-success-contrast: #06170f;
+    --ark-color-success-soft: #0f2e25;
+    --ark-color-success-border: #1d4a3c;
+    --ark-color-success-deep: #84dfc1;
+
+    --ark-color-warning: #ffa826;
+    --ark-color-warning-hover: #ffbb54;
+    --ark-color-warning-active: #d98a0a;
+    --ark-color-warning-contrast: #1c1203;
+    --ark-color-warning-soft: #33270f;
+    --ark-color-warning-border: #55401a;
+    --ark-color-warning-deep: #ffcb2e;
+
+    --ark-color-danger: #ff5a4f;
+    --ark-color-danger-hover: #ff8078;
+    --ark-color-danger-active: #e02b1d;
+    --ark-color-danger-contrast: #1c0605;
+    --ark-color-danger-soft: #3a1b19;
+    --ark-color-danger-border: #5c2a26;
+
+    --ark-color-info: #4e9bff;
+    --ark-color-info-hover: #78b1ff;
+    --ark-color-info-soft: #10294a;
+    --ark-color-info-border: #2c4a70;
+
+    --ark-color-bg: #16181c;
+    --ark-color-surface: #1f2226;
+    --ark-color-surface-muted: #2a2e33;
+    --ark-color-border: #383d44;
+    --ark-color-border-strong: #4a5057;
+    --ark-color-text: #f6f7f7;
+    --ark-color-text-muted: #a8b0b8;
+    --ark-color-text-subtle: #89939e;
+    --ark-color-text-inverted: #16181c;
+    --ark-color-disabled-bg: #2a2e33;
+    --ark-color-disabled-text: #6b737b;
+
+    --ark-color-control-bg: #2a2e33;
+    --ark-color-control-border: #4a5057;
+    --ark-color-control-text: #f6f7f7;
+    --ark-color-control-hover-bg: #383d44;
+    --ark-color-control-subtle-text: #f6f7f7;
+
+    --ark-shadow-sm: 0 2px 4px rgb(0 0 0 / 0.4);
+    --ark-shadow-md: 0 4px 8px rgb(0 0 0 / 0.45);
+    --ark-shadow-lg: 0 6px 12px rgb(0 0 0 / 0.5);
+    --ark-shadow-xl: 0 8px 16px rgb(0 0 0 / 0.55);
+    --ark-shadow-control: 0 2px 3px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.1);
+    --ark-shadow-control-hover: 0 4px 8px rgb(0 0 0 / 0.45);
+    --ark-shadow-control-pressed: inset 0 2px 3px rgb(0 0 0 / 0.6);
+  }
+}
+
+/* ------------------------------------------------------------ base reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--ark-font-sans);
+  font-size: var(--ark-font-size-md);
+  line-height: var(--ark-line-height-normal);
+  color: var(--ark-color-text);
+  background-color: var(--ark-color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--ark-font-display);
+  font-weight: var(--ark-font-weight-bold);
+  line-height: var(--ark-line-height-tight);
+}
+
+/* Ekran okuyucu icin gizli, ancak okunabilir metin */
+.ark-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

@@ -15,10 +15,10 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
     alias: {
       '@ark/ui-kit/styles.css': fileURLToPath(
-        new URL('../ark-insaat-projeler/libs/frontend/ui-kit/src/styles/index.css', import.meta.url),
+        new URL('./vendor/ui-kit/src/styles/index.css', import.meta.url),
       ),
       '@ark/ui-kit': fileURLToPath(
-        new URL('../ark-insaat-projeler/libs/frontend/ui-kit/src/index.ts', import.meta.url),
+        new URL('./vendor/ui-kit/src/index.ts', import.meta.url),
       ),
       react: fileURLToPath(new URL('./node_modules/react', import.meta.url)),
       'react-dom': fileURLToPath(new URL('./node_modules/react-dom', import.meta.url)),

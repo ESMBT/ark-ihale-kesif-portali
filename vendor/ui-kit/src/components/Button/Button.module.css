@@ -1,0 +1,160 @@
+/*
+ * Figma "Design System" -> Button component set
+ *   Variant=Primary, State=Default, Size=Medium : 272x40, r=5, fill #000000,
+ *                                                 stroke #2C2C2C 1px, gap 8, pad 12
+ *   Variant=Subtle                              : 112x40, r=8, text #303030
+ *   'shadows' cercevesi durumlari:
+ *     Hover    -> fill #333333, 0 4px 8px rgba(0,0,0,.18)
+ *     Pressed  -> inset 0 2px 3px rgba(0,0,0,.35)
+ *     Disabled -> fill/stroke #DFE1E2, text #999999
+ */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ark-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--ark-radius-md);
+  font-family: var(--ark-font-sans);
+  font-weight: var(--ark-font-weight-regular);
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--ark-transition-fast),
+    border-color var(--ark-transition-fast),
+    color var(--ark-transition-fast),
+    box-shadow var(--ark-transition-fast);
+}
+
+.button:focus-visible {
+  outline: var(--ark-ring-width) solid var(--ark-ring-color);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+}
+
+.loading {
+  cursor: progress;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.content {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------- boyutlar */
+.sm {
+  height: 32px;
+  padding: 0 var(--ark-space-2);
+  font-size: var(--ark-font-size-sm);
+}
+
+.md {
+  height: 40px;
+  padding: 0 var(--ark-space-3);
+  font-size: var(--ark-font-size-md);
+}
+
+.lg {
+  height: 48px;
+  padding: 0 var(--ark-space-4);
+  font-size: var(--ark-font-size-lg);
+}
+
+/* --------------------------------------------------------------- varyantlar */
+.primary {
+  background-color: var(--ark-color-control-bg);
+  border-color: var(--ark-color-control-border);
+  color: var(--ark-color-control-text);
+  box-shadow: var(--ark-shadow-control);
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--ark-color-control-hover-bg);
+  box-shadow: var(--ark-shadow-control-hover);
+}
+
+.primary:active:not(:disabled) {
+  background-color: var(--ark-color-control-bg);
+  box-shadow: var(--ark-shadow-control-pressed);
+}
+
+.primary:disabled {
+  background-color: var(--ark-color-disabled-bg);
+  border-color: var(--ark-color-disabled-bg);
+  color: var(--ark-color-disabled-text);
+  box-shadow: none;
+}
+
+.secondary {
+  background-color: transparent;
+  border-color: transparent;
+  border-radius: var(--ark-radius-lg);
+  color: var(--ark-color-control-subtle-text);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--ark-color-surface-muted);
+}
+
+.secondary:active:not(:disabled) {
+  background-color: var(--ark-color-border);
+}
+
+.secondary:disabled {
+  color: var(--ark-color-disabled-text);
+}
+
+.ghost {
+  background-color: transparent;
+  border-color: transparent;
+  border-radius: var(--ark-radius-lg);
+  color: var(--ark-color-text);
+}
+
+.ghost:hover:not(:disabled) {
+  background-color: var(--ark-color-surface-muted);
+}
+
+.ghost:disabled {
+  color: var(--ark-color-disabled-text);
+}
+
+.danger {
+  background-color: var(--ark-color-danger);
+  border-color: var(--ark-color-danger);
+  color: var(--ark-color-danger-contrast);
+  box-shadow: var(--ark-shadow-control);
+}
+
+.danger:hover:not(:disabled) {
+  background-color: var(--ark-color-danger-hover);
+}
+
+.danger:active:not(:disabled) {
+  background-color: var(--ark-color-danger-active);
+  box-shadow: var(--ark-shadow-control-pressed);
+}
+
+.danger:disabled {
+  background-color: var(--ark-color-disabled-bg);
+  border-color: var(--ark-color-disabled-bg);
+  color: var(--ark-color-disabled-text);
+  box-shadow: none;
+}
+
+/* Koyu temada siyah dolgu okunabilirligini kaybeder. */
+
+

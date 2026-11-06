@@ -194,6 +194,7 @@ function birimDuzelt(birim: string): string {
   if (n === 'm2' || n === 'mt2' || n === 'm^2') return 'm²'
   if (n === 'm3' || n === 'mt3' || n === 'm^3') return 'm³'
   if (n === 'mt') return 'm'
+  if (n === 'h' || n === 'sa') return 'saat'
   return birim.trim()
 }
 
